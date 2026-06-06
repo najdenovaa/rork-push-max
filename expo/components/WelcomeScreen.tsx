@@ -83,7 +83,7 @@ export default function WelcomeScreen() {
         <View style={{ height: 20 }} />
 
         <Text style={[styles.description, { color: c.textSecondary }]}>
-          Получайте мгновенные пуш-уведомления от ваших веб-платформ
+          Получайте уведомления из Max на ваш iPhone
         </Text>
 
         <View style={{ height: 40 }} />

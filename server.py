@@ -266,7 +266,7 @@ def green_webhook():
 
     Expected query param: ?token=GREEN_WEBHOOK_TOKEN
     Webhook types handled:
-      - stateInstanceChanged: mark user active when WhatsApp authorized
+      - stateInstanceChanged: mark user active when Max authorized
       - incomingMessageReceived: forward as push notification
     """
     # Verify token
