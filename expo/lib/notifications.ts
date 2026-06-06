@@ -36,12 +36,28 @@ export async function requestNotificationPermission(): Promise<PermissionResult>
   return status === "granted" ? "granted" : "denied";
 }
 
+/** Returns true when the token is a pending placeholder (not yet ready). */
+export function isPendingPushToken(token: string): boolean {
+  return token.includes("[pending");
+}
+
 export async function getPushToken(): Promise<string | null> {
   try {
     if (!Device.isDevice) {
       return `ExponentPushToken[simulator-${Platform.OS}]`;
     }
+
+    const permission = await requestNotificationPermission();
+    if (permission !== "granted") {
+      return null;
+    }
+
     const projectId = resolveExpoProjectId();
+    if (!projectId) {
+      console.log("[notifications] projectId is empty");
+      return null;
+    }
+
     const tokenResponse = await Notifications.getExpoPushTokenAsync({
       projectId,
     });

@@ -10,6 +10,7 @@ import { configureAndroidChannels } from "@/lib/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppProvider } from "@/providers/app";
 import BadgeSync from "@/components/BadgeSync";
+import PushTokenSync from "@/components/PushTokenSync";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -63,6 +64,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AppProvider>
           <BadgeSync />
+          <PushTokenSync />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
           </Stack>
