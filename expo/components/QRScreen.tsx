@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
 import {
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -16,7 +17,7 @@ const QR_REFRESH_MS = 20000;
 export default function QRScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { userId, checkStatus } = useApp();
+  const { userId, checkStatus, disconnect } = useApp();
 
   const [qrVersion, setQrVersion] = useState<number>(0);
   const [dotIndex, setDotIndex] = useState<number>(0);
@@ -65,6 +66,19 @@ export default function QRScreen() {
         },
       ]}
     >
+      {/* Back button — return to WelcomeScreen */}
+      <Pressable
+        onPress={() => void disconnect()}
+        style={({ pressed }) => [
+          styles.backButton,
+          { opacity: pressed ? 0.6 : 1 },
+        ]}
+        hitSlop={12}
+      >
+        <Text style={[styles.backArrow, { color: c.blue }]}>←</Text>
+        <Text style={[styles.backLabel, { color: c.blue }]}>Назад</Text>
+      </Pressable>
+
       <View style={styles.body}>
         <Text style={[styles.title, { color: c.text }]}>
           Подключите Max
@@ -159,6 +173,21 @@ const styles = StyleSheet.create({
   qrImage: {
     width: 250,
     height: 250,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  backArrow: {
+    fontSize: 24,
+    fontWeight: "600",
+  },
+  backLabel: {
+    fontSize: 18,
+    fontWeight: "600",
   },
   qrHint: {
     fontSize: 16,
