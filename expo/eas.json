@@ -8,7 +8,7 @@
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "development",
-        "EXPO_PUBLIC_PROJECT_ID": "lnl2nmwo5fphaf5gc5xzg"
+        "EXPO_PUBLIC_PROJECT_ID": "b83ad525-873b-4d42-b1c1-995dc844da51"
       }
     },
     "production": {
@@ -16,7 +16,7 @@
       "channel": "production",
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_PROJECT_ID": "lnl2nmwo5fphaf5gc5xzg"
+        "EXPO_PUBLIC_PROJECT_ID": "b83ad525-873b-4d42-b1c1-995dc844da51"
       }
     }
   },
