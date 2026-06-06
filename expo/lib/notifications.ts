@@ -1,5 +1,7 @@
+import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { MAX_APP_URL } from "@/constants/colors";
 
 export type PermissionResult = "granted" | "denied";
 
@@ -43,6 +45,33 @@ export async function getPushToken(): Promise<string | null> {
   } catch (error) {
     console.log("[notifications] failed to get push token", error);
     return null;
+  }
+}
+
+/** Resolve which URL to open when a push notification is tapped.
+ *  Prefers `data.url` from the payload, falls back to MAX_APP_URL. */
+export function resolvePushOpenUrl(data: Record<string, unknown> | undefined): string {
+  if (data?.url != null && typeof data.url === "string" && data.url.length > 0) {
+    return data.url;
+  }
+  return MAX_APP_URL;
+}
+
+/** Open the app/URL configured for this push notification.
+ *  Checks `canOpenURL` first to avoid crashes on iOS. */
+export async function openAppFromPushNotification(
+  data: Record<string, unknown> | undefined
+): Promise<void> {
+  const url = resolvePushOpenUrl(data);
+  try {
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    } else {
+      console.log("[notifications] cannot open url", url);
+    }
+  } catch (error) {
+    console.log("[notifications] failed to open url", url, error);
   }
 }
 

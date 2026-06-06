@@ -7,6 +7,9 @@ export const SERVER_URL = "https://mkspush.ru";
 export const PRIVACY_URL = "https://mkspush.ru/privacy";
 export const TERMS_URL = "https://mkspush.ru/terms";
 
+/** URL to open on push notification tap. */
+export const MAX_APP_URL = "https://max.ru/";
+
 /** Brand palette — Скидос family: green primary, amber accent. */
 export const Brand = {
   primary: "#16A34A",

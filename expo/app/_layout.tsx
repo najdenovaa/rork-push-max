@@ -6,7 +6,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { configureAndroidChannels } from "@/lib/notifications";
+import {
+  configureAndroidChannels,
+  openAppFromPushNotification,
+} from "@/lib/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppProvider } from "@/providers/app";
 import BadgeSync from "@/components/BadgeSync";
@@ -46,16 +49,27 @@ export default function RootLayout() {
       }
     });
 
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const url = response.notification.request.content.data?.url as
-          | string
-          | undefined;
-        if (url) {
-          void Linking.openURL(url);
-        }
+    const handleNotificationTap = (
+      response: Notifications.NotificationResponse
+    ): void => {
+      void openAppFromPushNotification(
+        response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined
+      );
+    };
+
+    // Cold start — notification tap launched the app
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        handleNotificationTap(response);
       }
-    );
+    });
+
+    const subscription =
+      Notifications.addNotificationResponseReceivedListener(
+        handleNotificationTap
+      );
     return () => subscription.remove();
   }, []);
 
