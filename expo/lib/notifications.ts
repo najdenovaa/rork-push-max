@@ -1,24 +1,7 @@
-import Constants from "expo-constants";
-import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-import { EXPO_PROJECT_ID } from "@/constants/colors";
-
 export type PermissionResult = "granted" | "denied";
-
-/** Resolve the EAS project ID from every available source, in priority order.
- *  Standalone (TestFlight) builds don't expose the dev env var, so we fall
- *  back to the embedded app config and finally the hardcoded constant. */
-export function resolveExpoProjectId(): string {
-  return (
-    process.env.EXPO_PUBLIC_PROJECT_ID ||
-    Constants.expoConfig?.extra?.eas?.projectId ||
-    // @ts-expect-error easConfig is loosely typed across SDK versions
-    Constants.easConfig?.projectId ||
-    EXPO_PROJECT_ID
-  );
-}
 
 export async function requestNotificationPermission(): Promise<PermissionResult> {
   const settings = await Notifications.getPermissionsAsync();
@@ -41,27 +24,22 @@ export function isPendingPushToken(token: string): boolean {
   return token.includes("[pending");
 }
 
+/** Obtain the native APNs (iOS) or FCM (Android) device push token.
+ *  Does NOT use Expo Push — the server sends directly through APNs. */
 export async function getPushToken(): Promise<string | null> {
   try {
-    if (!Device.isDevice) {
-      return `ExponentPushToken[simulator-${Platform.OS}]`;
-    }
-
     const permission = await requestNotificationPermission();
     if (permission !== "granted") {
       return null;
     }
 
-    const projectId = resolveExpoProjectId();
-    if (!projectId) {
-      console.log("[notifications] projectId is empty");
-      return null;
+    // iOS requires explicit registration before requesting the device token.
+    if (Platform.OS === "ios") {
+      await Notifications.registerDeviceForRemoteMessagesAsync();
     }
 
-    const tokenResponse = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
-    return tokenResponse.data;
+    const { data } = await Notifications.getDevicePushTokenAsync();
+    return data ?? null;
   } catch (error) {
     console.log("[notifications] failed to get push token", error);
     return null;

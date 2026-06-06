@@ -9,7 +9,7 @@ import { useApp } from "@/providers/app";
 
 const RETRY_MS = 15000;
 
-/** Keep Expo push token on the server — works on any screen (QR + connected). */
+/** Keep APNs device token on the server — works on any screen (QR + connected). */
 export default function PushTokenSync() {
   const { userId, updatePushToken } = useApp();
   const syncedRef = useRef(false);

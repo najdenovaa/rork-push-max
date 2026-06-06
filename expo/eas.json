@@ -7,16 +7,14 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "APP_VARIANT": "development",
-        "EXPO_PUBLIC_PROJECT_ID": "b83ad525-873b-4d42-b1c1-995dc844da51"
+        "APP_VARIANT": "development"
       }
     },
     "production": {
       "distribution": "store",
       "channel": "production",
       "env": {
-        "APP_VARIANT": "production",
-        "EXPO_PUBLIC_PROJECT_ID": "b83ad525-873b-4d42-b1c1-995dc844da51"
+        "APP_VARIANT": "production"
       }
     }
   },

@@ -87,7 +87,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, []);
 
-  /** Push the latest Expo push token to the server for this user.
+  /** Push the latest APNs device token to the server for this user.
    *  Used by QRScreen to retry token delivery in standalone builds where the
    *  token may not be ready at registration time. */
   const updatePushToken = useCallback(

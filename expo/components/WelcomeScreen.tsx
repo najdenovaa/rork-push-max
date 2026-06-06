@@ -39,7 +39,7 @@ export default function WelcomeScreen() {
     // first launch. Don't block the user with a server error — register with a
     // placeholder and let QRScreen retry the real token in the background.
     const token =
-      (await getPushToken()) ?? "ExponentPushToken[pending-ios]";
+      (await getPushToken()) ?? "pending-ios";
 
     const result = await register(token);
     if (!result.success) {
