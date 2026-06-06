@@ -19,9 +19,12 @@
       "backgroundColor": "#DCFCE7"
     },
     "ios": {
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": false,
       "bundleIdentifier": "app.rork.lnl2nmwo5fphaf5gc5xzg",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"

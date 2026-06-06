@@ -87,6 +87,26 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, []);
 
+  /** Push the latest Expo push token to the server for this user.
+   *  Used by QRScreen to retry token delivery in standalone builds where the
+   *  token may not be ready at registration time. */
+  const updatePushToken = useCallback(
+    async (id: string, token: string): Promise<boolean> => {
+      try {
+        const res = await fetchWithTimeout(`${SERVER_URL}/api/token/${id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        return res.ok;
+      } catch (err) {
+        console.log("[app] updatePushToken failed", err);
+        return false;
+      }
+    },
+    []
+  );
+
   /** Check pairing status from the server. */
   const checkStatus = useCallback(async (): Promise<AppStatus> => {
     if (!userId) {
@@ -138,6 +158,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     status,
     isLoaded,
     register,
+    updatePushToken,
     checkStatus,
     disconnect,
   };

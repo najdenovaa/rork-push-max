@@ -177,6 +177,39 @@ def register():
     return jsonify({"user_id": user_id})
 
 
+@app.route("/api/token/<userId>", methods=["POST"])
+def update_token(userId: str):
+    """Update the Expo push token for an existing user.
+
+    Used by the app to deliver the real token in standalone (TestFlight)
+    builds where it may not have been ready at registration time.
+    Request: { token: string }
+    """
+    body = request.get_json(silent=True) or {}
+    token: str | None = body.get("token")
+
+    if not token or not isinstance(token, str) or len(token.strip()) == 0:
+        return jsonify({"error": "missing token"}), 400
+
+    # Ignore placeholder tokens that aren't yet real device tokens.
+    if "pending" in token:
+        return jsonify({"status": "ignored"}), 200
+
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT user_id FROM users WHERE user_id = ?", (userId,)
+        ).fetchone()
+        if row is None:
+            return jsonify({"error": "not_found"}), 404
+        conn.execute(
+            "UPDATE users SET push_token = ? WHERE user_id = ?",
+            (token.strip(), userId),
+        )
+        conn.commit()
+
+    return jsonify({"status": "updated"})
+
+
 @app.route("/api/status/<userId>", methods=["GET"])
 def status(userId: str):
     """Return pairing status for the given user."""

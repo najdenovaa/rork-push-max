@@ -3,13 +3,34 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import { EXPO_PROJECT_ID } from "@/constants/colors";
+
 export type PermissionResult = "granted" | "denied";
+
+/** Resolve the EAS project ID from every available source, in priority order.
+ *  Standalone (TestFlight) builds don't expose the dev env var, so we fall
+ *  back to the embedded app config and finally the hardcoded constant. */
+export function resolveExpoProjectId(): string {
+  return (
+    process.env.EXPO_PUBLIC_PROJECT_ID ||
+    Constants.expoConfig?.extra?.eas?.projectId ||
+    // @ts-expect-error easConfig is loosely typed across SDK versions
+    Constants.easConfig?.projectId ||
+    EXPO_PROJECT_ID
+  );
+}
 
 export async function requestNotificationPermission(): Promise<PermissionResult> {
   const settings = await Notifications.getPermissionsAsync();
   let status = settings.status;
   if (status !== "granted") {
-    const request = await Notifications.requestPermissionsAsync();
+    const request = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
     status = request.status;
   }
   return status === "granted" ? "granted" : "denied";
@@ -20,13 +41,10 @@ export async function getPushToken(): Promise<string | null> {
     if (!Device.isDevice) {
       return `ExponentPushToken[simulator-${Platform.OS}]`;
     }
-    const projectId =
-      process.env.EXPO_PUBLIC_PROJECT_ID ||
-      Constants.expoConfig?.extra?.eas?.projectId ||
-      undefined;
-    const tokenResponse = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    );
+    const projectId = resolveExpoProjectId();
+    const tokenResponse = await Notifications.getExpoPushTokenAsync({
+      projectId,
+    });
     return tokenResponse.data;
   } catch (error) {
     console.log("[notifications] failed to get push token", error);
