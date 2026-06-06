@@ -1,7 +1,7 @@
 import { useColorScheme } from "react-native";
 
 /** Hardcoded server URL — no user input required. */
-export const SERVER_URL = "https://maxnotify.ru";
+export const SERVER_URL = "https://mkspush.ru";
 
 /** Brand palette. High-contrast, large-type friendly. */
 export const Brand = {
