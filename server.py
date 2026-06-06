@@ -32,7 +32,7 @@ def _new_user_id() -> str:
 
 def _qr_png(user_id: str) -> io.BytesIO:
     """Return a PNG QR code encoding the pairing deep-link."""
-    pairing_url = f"maxnotify://pair?user_id={user_id}"
+    pairing_url = f"mkspush://pair?user_id={user_id}"
     img = qrcode.make(pairing_url, error_correction=qrcode.constants.ERROR_CORRECT_M)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -69,7 +69,7 @@ def status(userId: str):
 
 @app.route("/api/qr/<userId>", methods=["GET"])
 def qr(userId: str):
-    """Return a PNG QR code encoding maxnotify://pair?user_id=<userId>."""
+    """Return a PNG QR code encoding mkspush://pair?user_id=<userId>."""
     if userId not in _sessions:
         return jsonify({"error": "unknown user"}), 404
 
