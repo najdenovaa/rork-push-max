@@ -26,33 +26,15 @@ export function isPendingPushToken(token: string): boolean {
   return token.startsWith("pending") || token.includes("[pending");
 }
 
-/** Obtain the native APNs (iOS) or FCM (Android) device push token.
- *  Does NOT use Expo Push — the server sends directly through APNs. */
+/** Obtain the Expo push token. */
 export async function getPushToken(): Promise<string | null> {
   try {
     const permission = await requestNotificationPermission();
-    if (permission !== "granted") {
-      console.log("[getPushToken] permission denied");
-      return null;
-    }
-
-    // iOS requires explicit registration before requesting the device token.
-    if (Platform.OS === "ios") {
-      await Notifications.registerDeviceForRemoteMessagesAsync();
-      console.log("[getPushToken] registered for remote messages");
-    }
-
-    const result = await Notifications.getDevicePushTokenAsync();
-    const preview =
-      result.data === null || result.data === undefined
-        ? "null"
-        : String(result.data).length <= 20
-          ? String(result.data)
-          : String(result.data).slice(0, 20) + "…";
-    console.log("[getPushToken] type:", result.type, "data:", preview);
-    return result.data ?? null;
+    if (permission !== "granted") return null;
+    const { data } = await Notifications.getExpoPushTokenAsync();
+    return data ?? null;
   } catch (error) {
-    console.log("[getPushToken] exception:", error);
+    console.log("[notifications] failed to get push token", error);
     return null;
   }
 }

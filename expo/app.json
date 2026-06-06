@@ -21,15 +21,7 @@
     "ios": {
       "buildNumber": "9",
       "supportsTablet": false,
-      "bundleIdentifier": "ru.mskpush.app",
-      "entitlements": {
-        "aps-environment": "production"
-      },
-      "infoPlist": {
-        "UIBackgroundModes": [
-          "remote-notification"
-        ]
-      }
+      "bundleIdentifier": "app.rork.lnl2nmwo5fphaf5gc5xzg"
     },
     "android": {
       "adaptiveIcon": {
