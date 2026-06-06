@@ -51,11 +51,17 @@ def _init_db() -> None:
                 status TEXT NOT NULL DEFAULT 'pending'
                     CHECK(status IN ('pending','active')),
                 green_instance_id TEXT,
+                unread_count INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (green_instance_id)
                     REFERENCES green_instances(instance_id)
             )
         """)
+        # Migrate older DBs that predate the unread_count column.
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN unread_count INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
         conn.commit()
 
 
@@ -105,7 +111,7 @@ def _green_logout(api_url: str, instance_id: str, api_token: str) -> bool:
         return False
 
 
-def _send_expo_push(token: str, title: str, body: str, data: dict | None = None) -> None:
+def _send_expo_push(token: str, title: str, body: str, data: dict | None = None, badge: int | None = None) -> None:
     """Send a push notification via Expo Push API."""
     payload: dict = {
         "to": token,
@@ -114,6 +120,8 @@ def _send_expo_push(token: str, title: str, body: str, data: dict | None = None)
     }
     if data:
         payload["data"] = data
+    if badge is not None:
+        payload["badge"] = badge
     try:
         requests.post(
             "https://exp.host/--/api/v2/push/send",
@@ -208,6 +216,25 @@ def update_token(userId: str):
         conn.commit()
 
     return jsonify({"status": "updated"})
+
+
+@app.route("/api/badge/<userId>/reset", methods=["POST"])
+def reset_badge(userId: str):
+    """Reset the user's unread counter to 0.
+
+    Called by the app when it opens / becomes active so the icon badge clears.
+    """
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT user_id FROM users WHERE user_id = ?", (userId,)
+        ).fetchone()
+        if row is None:
+            return jsonify({"error": "not_found"}), 404
+        conn.execute(
+            "UPDATE users SET unread_count = 0 WHERE user_id = ?", (userId,)
+        )
+        conn.commit()
+    return jsonify({"status": "reset"})
 
 
 @app.route("/api/status/<userId>", methods=["GET"])
@@ -346,6 +373,18 @@ def green_webhook():
             ).fetchone()
 
             if user:
+                conn.execute(
+                    "UPDATE users SET unread_count = unread_count + 1 "
+                    "WHERE user_id = ?",
+                    (assigned_user_id,),
+                )
+                conn.commit()
+                badge_row = conn.execute(
+                    "SELECT unread_count FROM users WHERE user_id = ?",
+                    (assigned_user_id,),
+                ).fetchone()
+                unread: int = badge_row["unread_count"] if badge_row else 1
+
                 sender_data: dict = body.get("senderData", {})
                 sender_name: str = sender_data.get("senderName", "Контакт")
                 sender: str = sender_data.get("sender", "")
@@ -364,6 +403,7 @@ def green_webhook():
                             "senderName": sender_name,
                             "instance_id": instance_id,
                         },
+                        badge=unread,
                     )
 
     return Response("OK"), 200

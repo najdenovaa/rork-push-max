@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { configureAndroidChannels } from "@/lib/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppProvider } from "@/providers/app";
+import BadgeSync from "@/components/BadgeSync";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -61,6 +62,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AppProvider>
+          <BadgeSync />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
           </Stack>

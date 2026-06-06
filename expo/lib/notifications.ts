@@ -52,6 +52,29 @@ export async function getPushToken(): Promise<string | null> {
   }
 }
 
+/** Clear the iOS app icon badge counter. */
+export async function clearAppBadge(): Promise<void> {
+  try {
+    await Notifications.setBadgeCountAsync(0);
+  } catch (error) {
+    console.log("[notifications] failed to clear badge", error);
+  }
+}
+
+/** Apply a badge count from an incoming push notification payload. */
+export async function applyNotificationBadge(
+  notification: Notifications.Notification
+): Promise<void> {
+  try {
+    const badge = notification.request.content.badge;
+    if (typeof badge === "number" && badge >= 0) {
+      await Notifications.setBadgeCountAsync(badge);
+    }
+  } catch (error) {
+    console.log("[notifications] failed to apply badge", error);
+  }
+}
+
 export async function configureAndroidChannels(): Promise<void> {
   if (Platform.OS !== "android") {
     return;

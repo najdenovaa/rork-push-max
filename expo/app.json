@@ -19,7 +19,7 @@
       "backgroundColor": "#DCFCE7"
     },
     "ios": {
-      "buildNumber": "2",
+      "buildNumber": "3",
       "supportsTablet": false,
       "bundleIdentifier": "app.rork.lnl2nmwo5fphaf5gc5xzg",
       "entitlements": {
