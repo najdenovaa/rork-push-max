@@ -3,37 +3,38 @@ import { useColorScheme } from "react-native";
 /** Hardcoded server URL — no user input required. */
 export const SERVER_URL = "https://mkspush.ru";
 
-/** Brand palette. High-contrast, large-type friendly. */
+/** Brand palette — Скидос family: green primary, amber accent. */
 export const Brand = {
-  blue: "#007AFF",
-  green: "#34C759",
-  red: "#FF3B30",
+  primary: "#16A34A",
+  green: "#22C55E",
+  red: "#EF4444",
+  amber: "#F59E0B",
   gray: "#8E8E93",
 } as const;
 
 const palette = {
   light: {
-    background: "#FFFFFF",
-    surface: "#F2F2F7",
-    text: "#000000",
-    textSecondary: "#8E8E93",
-    textFaint: "#AEAEB2",
-    border: "#D1D1D6",
-    blue: Brand.blue,
-    green: Brand.green,
-    red: Brand.red,
+    background: "#FAFDF7",
+    surface: "#FFFFFF",
+    text: "#0A1F12",
+    textSecondary: "#5A7D65",
+    textFaint: "#8FAA97",
+    border: "#D1E8D6",
+    blue: "#16A34A",
+    green: "#22C55E",
+    red: "#EF4444",
     onAccent: "#FFFFFF",
   },
   dark: {
-    background: "#000000",
-    surface: "#1C1C1E",
-    text: "#FFFFFF",
-    textSecondary: "#98989F",
-    textFaint: "#636366",
-    border: "#3A3A3C",
-    blue: "#0A84FF",
-    green: "#30D158",
-    red: "#FF453A",
+    background: "#071A10",
+    surface: "#0F2A1A",
+    text: "#F3FFF5",
+    textSecondary: "#B7D9C1",
+    textFaint: "#4D7A5E",
+    border: "#1D4B2E",
+    blue: "#22C55E",
+    green: "#22C55E",
+    red: "#F87171",
     onAccent: "#FFFFFF",
   },
 } as const;

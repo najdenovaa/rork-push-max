@@ -35,7 +35,7 @@ export default function StatusCircle({ status }: Props) {
     status === "active"
       ? Brand.green
       : status === "pending"
-        ? Brand.blue
+        ? Brand.primary
         : Brand.gray;
 
   const haloOpacity = pulse.interpolate({
