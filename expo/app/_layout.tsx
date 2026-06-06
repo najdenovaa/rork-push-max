@@ -4,6 +4,7 @@ import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import {
@@ -48,6 +49,10 @@ export default function RootLayout() {
         // Ignore malformed URLs
       }
     });
+
+    if (Platform.OS === "web") {
+      return;
+    }
 
     const handleNotificationTap = (
       response: Notifications.NotificationResponse
