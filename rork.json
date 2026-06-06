@@ -5,7 +5,8 @@
       "path": "expo",
       "framework": "react-native",
       "settings": {
-        "displayName": "Msk push"
+        "displayName": "Msk push",
+        "iosBundleId": "ru.mskpush.app"
       }
     }
   ],
