@@ -70,10 +70,10 @@ export default function WelcomeScreen() {
       ]}
     >
       <View style={styles.body}>
-        <Text style={[styles.title, { color: c.text }]}>Smart Notify</Text>
+        <Text style={[styles.title, { color: c.text }]}>MKS Push</Text>
 
         <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-          Ваши системные уведомления
+          Push-уведомления на ваш iPhone
         </Text>
 
         <View style={{ height: 20 }} />
