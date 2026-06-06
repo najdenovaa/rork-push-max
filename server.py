@@ -1,105 +1,339 @@
-"""MKS Push — Flask backend for push-notification companion app."""
+"""MKS Push — Flask backend: GREEN-API multi-tenant push notifications."""
 
 import io
+import os
+import sqlite3
 import uuid
-from dataclasses import dataclass, field
-from typing import Optional
 
-import qrcode
 import requests
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, Response, jsonify, request, send_file
+
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------------------------
-# In-memory storage
-# ---------------------------------------------------------------------------
-
-@dataclass
-class Session:
-    token: str
-    status: str = "pending"  # "pending" | "active"
-
-_sessions: dict[str, Session] = {}
-
+DB_PATH = os.environ.get("DB_PATH", "mkspush.db")
+GREEN_WEBHOOK_TOKEN = os.environ.get("GREEN_WEBHOOK_TOKEN", "changeme")
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Database helpers
 # ---------------------------------------------------------------------------
 
-def _new_user_id() -> str:
-    return uuid.uuid4().hex  # 32-char, no dashes — cleaner for URLs
+
+def _db() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
 
 
-def _qr_png(user_id: str) -> io.BytesIO:
-    """Return a PNG QR code encoding the pairing deep-link."""
-    pairing_url = f"mkspush://pair?user_id={user_id}"
-    img = qrcode.make(pairing_url, error_correction=qrcode.constants.ERROR_CORRECT_M)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return buf
+def _init_db() -> None:
+    with _db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS green_instances (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                instance_id TEXT NOT NULL UNIQUE,
+                api_token TEXT NOT NULL,
+                api_url TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'free'
+                    CHECK(status IN ('free','assigned')),
+                assigned_user_id TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id TEXT PRIMARY KEY,
+                push_token TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending','active')),
+                green_instance_id TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (green_instance_id)
+                    REFERENCES green_instances(instance_id)
+            )
+        """)
+        conn.commit()
+
+
+_init_db()
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# GREEN-API helpers
 # ---------------------------------------------------------------------------
+
+
+def _green_qr(api_url: str, instance_id: str, api_token: str) -> bytes | None:
+    """Fetch a fresh QR code from GREEN-API. Returns raw PNG bytes or None."""
+    # GREEN-API QR endpoint: GET {apiUrl}/waInstance{id}/qr/{apiTokenInstance}
+    url = f"{api_url.rstrip('/')}/waInstance{instance_id}/qr/{api_token}"
+    try:
+        r = requests.get(url, timeout=15)
+        if r.status_code == 200 and r.headers.get("content-type", "").startswith("image/"):
+            return r.content
+    except requests.RequestException:
+        pass
+    return None
+
+
+def _green_logout(api_url: str, instance_id: str, api_token: str) -> bool:
+    """Logout a GREEN-API instance (release for next user)."""
+    url = f"{api_url.rstrip('/')}/waInstance{instance_id}/logout/{api_token}"
+    try:
+        r = requests.post(url, timeout=10)
+        return r.status_code == 200
+    except requests.RequestException:
+        return False
+
+
+def _send_expo_push(token: str, title: str, body: str, data: dict | None = None) -> None:
+    """Send a push notification via Expo Push API."""
+    payload: dict = {
+        "to": token,
+        "title": title,
+        "body": body,
+    }
+    if data:
+        payload["data"] = data
+    try:
+        requests.post(
+            "https://exp.host/--/api/v2/push/send",
+            json=payload,
+            timeout=10,
+        )
+    except requests.RequestException:
+        pass  # best-effort delivery
+
+
+# ---------------------------------------------------------------------------
+# Routes — Registration & device management
+# ---------------------------------------------------------------------------
+
 
 @app.route("/api/register", methods=["POST"])
 def register():
-    """Accept an Expo push token, create a session, return user_id."""
-    body = request.get_json(silent=True) or {}
-    token: Optional[str] = body.get("token")
+    """Register a device, assign a free GREEN-API instance.
 
-    if not token:
+    Request:  { token: string }          – Expo push token
+    Success:  200 { user_id: string }
+    No slots: 503 { error: "no_slots", message: string }
+    """
+    body = request.get_json(silent=True) or {}
+    token: str | None = body.get("token")
+
+    if not token or not isinstance(token, str) or len(token.strip()) == 0:
         return jsonify({"error": "missing token"}), 400
 
-    user_id = _new_user_id()
-    _sessions[user_id] = Session(token=token, status="pending")
+    with _db() as conn:
+        # Grab one free instance
+        row = conn.execute(
+            "SELECT instance_id, api_token, api_url FROM green_instances "
+            "WHERE status = 'free' LIMIT 1"
+        ).fetchone()
+
+        if row is None:
+            return jsonify({
+                "error": "no_slots",
+                "message": "Сейчас все места заняты. Попробуйте позже.",
+            }), 503
+
+        user_id = uuid.uuid4().hex
+
+        # Assign the instance
+        conn.execute(
+            "UPDATE green_instances SET status = 'assigned', assigned_user_id = ? "
+            "WHERE instance_id = ?",
+            (user_id, row["instance_id"]),
+        )
+
+        # Create user
+        conn.execute(
+            "INSERT INTO users (user_id, push_token, status, green_instance_id) "
+            "VALUES (?, ?, 'pending', ?)",
+            (user_id, token.strip(), row["instance_id"]),
+        )
+
+        conn.commit()
+
     return jsonify({"user_id": user_id})
 
 
 @app.route("/api/status/<userId>", methods=["GET"])
 def status(userId: str):
     """Return pairing status for the given user."""
-    session = _sessions.get(userId)
-    if session is None:
-        return jsonify({"status": "pending"}), 404
-    return jsonify({"status": session.status})
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT status FROM users WHERE user_id = ?", (userId,)
+        ).fetchone()
+        if row is None:
+            return jsonify({"status": "pending"}), 404
+        return jsonify({"status": row["status"]})
 
 
-@app.route("/api/qr/<userId>", methods=["GET"])
-def qr(userId: str):
-    """Return a PNG QR code encoding mkspush://pair?user_id=<userId>."""
-    if userId not in _sessions:
-        return jsonify({"error": "unknown user"}), 404
+@app.route("/api/max-qr/<userId>", methods=["GET"])
+def max_qr(userId: str):
+    """Proxy a QR code from GREEN-API for the user's assigned instance.
 
-    buf = _qr_png(userId)
+    The GREEN-API token is never exposed to the client.
+    ?v=  query param is accepted for cache busting (ignored server-side).
+    """
+    with _db() as conn:
+        user = conn.execute(
+            "SELECT green_instance_id FROM users WHERE user_id = ?", (userId,)
+        ).fetchone()
+        if user is None:
+            return jsonify({"error": "unknown user"}), 404
+
+        inst = conn.execute(
+            "SELECT instance_id, api_token, api_url FROM green_instances "
+            "WHERE instance_id = ?",
+            (user["green_instance_id"],),
+        ).fetchone()
+        if inst is None:
+            return jsonify({"error": "no instance assigned"}), 500
+
+    png = _green_qr(inst["api_url"], inst["instance_id"], inst["api_token"])
+    if png is None:
+        return jsonify({"error": "failed to fetch QR from GREEN-API"}), 502
+
     return send_file(
-        buf,
+        io.BytesIO(png),
         mimetype="image/png",
         as_attachment=False,
         download_name=f"qr-{userId}.png",
     )
 
 
-@app.route("/api/test-auth/<userId>", methods=["POST"])
-def test_auth(userId: str):
-    """Force the session into 'active' (5-tap easter-egg on QR)."""
-    session = _sessions.get(userId)
-    if session is None:
-        return jsonify({"error": "unknown user"}), 404
+@app.route("/api/disconnect/<userId>", methods=["POST"])
+def disconnect(userId: str):
+    """Disconnect user: logout GREEN-API instance, free the slot, delete user."""
+    with _db() as conn:
+        user = conn.execute(
+            "SELECT green_instance_id FROM users WHERE user_id = ?", (userId,)
+        ).fetchone()
+        if user is None:
+            return jsonify({"error": "unknown user"}), 404
 
-    session.status = "active"
-    return jsonify({"status": "active"})
+        inst = conn.execute(
+            "SELECT instance_id, api_token, api_url FROM green_instances "
+            "WHERE instance_id = ?",
+            (user["green_instance_id"],),
+        ).fetchone()
+
+        if inst is not None:
+            # Best-effort logout — don't block on failure
+            _green_logout(inst["api_url"], inst["instance_id"], inst["api_token"])
+
+            conn.execute(
+                "UPDATE green_instances SET status = 'free', assigned_user_id = NULL "
+                "WHERE instance_id = ?",
+                (inst["instance_id"],),
+            )
+
+        conn.execute("DELETE FROM users WHERE user_id = ?", (userId,))
+        conn.commit()
+
+    return jsonify({"status": "disconnected"})
+
+
+# ---------------------------------------------------------------------------
+# GREEN-API webhook
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/green/webhook", methods=["POST"])
+def green_webhook():
+    """Handle GREEN-API webhooks.
+
+    Expected query param: ?token=GREEN_WEBHOOK_TOKEN
+    Webhook types handled:
+      - stateInstanceChanged: mark user active when WhatsApp authorized
+      - incomingMessageReceived: forward as push notification
+    """
+    # Verify token
+    if request.args.get("token") != GREEN_WEBHOOK_TOKEN:
+        return jsonify({"error": "unauthorized"}), 401
+
+    body = request.get_json(silent=True) or {}
+    webhook_type: str = body.get("typeWebhook", "")
+    instance_data: dict = body.get("instanceData", {})
+    instance_id: str | None = instance_data.get("idInstance")
+
+    if not instance_id:
+        return Response("OK"), 200
+
+    # Normalize: GREEN-API sometimes sends int, sometimes str
+    instance_id = str(instance_id)
+
+    with _db() as conn:
+        inst = conn.execute(
+            "SELECT assigned_user_id FROM green_instances WHERE instance_id = ?",
+            (instance_id,),
+        ).fetchone()
+
+        if inst is None:
+            return Response("OK"), 200
+
+        assigned_user_id: str | None = inst["assigned_user_id"]
+
+        # --- stateInstanceChanged ---
+        if webhook_type == "stateInstanceChanged":
+            state: str = instance_data.get("stateInstance", "")
+            if state == "authorized" and assigned_user_id:
+                conn.execute(
+                    "UPDATE users SET status = 'active' WHERE user_id = ?",
+                    (assigned_user_id,),
+                )
+                conn.commit()
+
+        # --- incomingMessageReceived ---
+        elif webhook_type == "incomingMessageReceived" and assigned_user_id:
+            user = conn.execute(
+                "SELECT push_token FROM users WHERE user_id = ?",
+                (assigned_user_id,),
+            ).fetchone()
+
+            if user:
+                sender_data: dict = body.get("senderData", {})
+                sender_name: str = sender_data.get("senderName", "Контакт")
+                sender: str = sender_data.get("sender", "")
+
+                message_data: dict = body.get("messageData", {})
+                text_data: dict = message_data.get("textMessageData", {})
+                text: str = text_data.get("textMessage", "")
+
+                if text:
+                    _send_expo_push(
+                        user["push_token"],
+                        title=sender_name,
+                        body=text,
+                        data={
+                            "sender": sender,
+                            "senderName": sender_name,
+                            "instance_id": instance_id,
+                        },
+                    )
+
+    return Response("OK"), 200
+
+
+# ---------------------------------------------------------------------------
+# Manual push send (for /panel testing)
+# ---------------------------------------------------------------------------
 
 
 @app.route("/api/send/<userId>", methods=["POST"])
 def send_push(userId: str):
-    """Send a push notification to the user via Expo Push API."""
-    session = _sessions.get(userId)
-    if session is None:
-        return jsonify({"error": "unknown user"}), 404
+    """Send a push notification to a user via Expo Push API (manual test)."""
+    with _db() as conn:
+        user = conn.execute(
+            "SELECT push_token FROM users WHERE user_id = ?", (userId,)
+        ).fetchone()
+        if user is None:
+            return jsonify({"error": "unknown user"}), 404
 
     body = request.get_json(silent=True) or {}
     title = body.get("title")
@@ -109,7 +343,7 @@ def send_push(userId: str):
         return jsonify({"error": "missing title or body"}), 400
 
     payload = {
-        "to": session.token,
+        "to": user["push_token"],
         "title": title,
         "body": message,
         "data": body.get("data", {}),
@@ -126,26 +360,11 @@ def send_push(userId: str):
         return jsonify({"error": str(e)}), 502
 
 
-@app.route("/api/disconnect/<userId>", methods=["POST"])
-def disconnect(userId: str):
-    """Remove the session."""
-    if userId in _sessions:
-        del _sessions[userId]
-    return jsonify({"status": "disconnected"})
-
-
 # ---------------------------------------------------------------------------
-# Test panel (HTML)
+# HTML pages — public & test panel
 # ---------------------------------------------------------------------------
 
-_PANEL_HTML = """
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MKS Push · Панель</title>
-<style>
+_PAGE_CSS = """
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
@@ -161,7 +380,9 @@ _PANEL_HTML = """
     width: 100%; max-width: 400px;
     box-shadow: 0 4px 24px rgba(22,163,74,.12);
   }
-  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: #16A34A; }
+  .card-wide { max-width: 540px; margin: 24px 0; }
+  h1 { font-size: 24px; font-weight: 700; color: #16A34A; margin-bottom: 4px; }
+  h2 { font-size: 18px; font-weight: 600; color: #0A1F12; margin: 20px 0 8px; }
   .sub { font-size: 15px; color: #5A7D65; margin-bottom: 24px; }
   label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #0A1F12; }
   input, textarea {
@@ -197,7 +418,29 @@ _PANEL_HTML = """
   }
   #result.success { display: block; background: #DCFCE7; color: #0B5D2A; }
   #result.error   { display: block; background: #FEF2F2; color: #991B1B; }
-</style>
+  p, li { font-size: 15px; color: #5A7D65; line-height: 1.6; }
+  ul { padding-left: 20px; margin: 8px 0 16px; }
+  a { color: #16A34A; }
+  .links { margin-top: 24px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .links a {
+    font-size: 15px; font-weight: 500;
+    color: #16A34A; text-decoration: none;
+    padding: 8px 16px; border-radius: 10px;
+    background: #DCFCE7;
+    transition: background .15s;
+  }
+  .links a:active, .back:active { background: #D1E8D6; }
+  .back { display: inline-block; margin-top: 24px; font-size: 15px; font-weight: 500; color: #16A34A; text-decoration: none; padding: 8px 16px; border-radius: 10px; background: #DCFCE7; }
+  .center-text { text-align: center; }
+"""
+
+_PANEL_HTML = f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MKS Push · Панель</title>
+<style>{_PAGE_CSS}</style>
 </head>
 <body>
 <div class="card">
@@ -218,95 +461,54 @@ _PANEL_HTML = """
 </div>
 
 <script>
-async function send() {
+async function send() {{
   const uid = document.getElementById("uid").value.trim();
   const title = document.getElementById("t").value.trim();
   const body = document.getElementById("b").value.trim();
   const res = document.getElementById("result");
 
-  if (!uid) { show("Введите User ID", false); return; }
-  if (!title || !body) { show("Заполните заголовок и текст", false); return; }
+  if (!uid) {{ show("Введите User ID", false); return; }}
+  if (!title || !body) {{ show("Заполните заголовок и текст", false); return; }}
 
-  try {
-    const r = await fetch(`/api/send/${uid}`, {
+  try {{
+    const r = await fetch(`/api/send/${{uid}}`, {{
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body }),
-    });
+      headers: {{ "Content-Type": "application/json" }},
+      body: JSON.stringify({{ title, body }}),
+    }});
     const data = await r.json();
-    if (r.ok && data.data?.status === "ok") {
+    if (r.ok && data.data?.status === "ok") {{
       show("Пуш отправлен ✓", true);
-    } else if (r.ok) {
+    }} else if (r.ok) {{
       show("Ответ Expo: " + JSON.stringify(data), true);
-    } else {
+    }} else {{
       show(data.error || "Ошибка", false);
-    }
-  } catch (e) {
+    }}
+  }} catch (e) {{
     show("Сеть: " + e.message, false);
-  }
-}
+  }}
+}}
 
-function show(msg, ok) {
+function show(msg, ok) {{
   const el = document.getElementById("result");
   el.textContent = msg;
   el.className = ok ? "success" : "error";
   el.style.display = "block";
-}
+}}
 </script>
 </body>
-</html>
-"""
+</html>"""
 
-
-@app.route("/panel")
-def panel():
-    """Simple HTML form to test push sending from a phone browser."""
-    return _PANEL_HTML
-
-
-# ---------------------------------------------------------------------------
-# Public pages
-# ---------------------------------------------------------------------------
-
-_INDEX_HTML = """
-<!DOCTYPE html>
+_INDEX_HTML = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MKS Push</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-    background: #DCFCE7;
-    color: #0A1F12;
-    display: flex; justify-content: center; align-items: center;
-    min-height: 100vh; padding: 16px;
-  }
-  .card {
-    background: #fff;
-    border-radius: 20px;
-    padding: 40px 28px;
-    width: 100%; max-width: 400px;
-    box-shadow: 0 4px 24px rgba(22,163,74,.12);
-    text-align: center;
-  }
-  h1 { font-size: 28px; font-weight: 700; color: #16A34A; margin-bottom: 8px; }
-  p { font-size: 16px; color: #5A7D65; line-height: 1.5; }
-  .links { margin-top: 24px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-  .links a {
-    font-size: 15px; font-weight: 500;
-    color: #16A34A; text-decoration: none;
-    padding: 8px 16px; border-radius: 10px;
-    background: #DCFCE7;
-    transition: background .15s;
-  }
-  .links a:active { background: #D1E8D6; }
-</style>
+<style>{_PAGE_CSS}</style>
 </head>
 <body>
-<div class="card">
+<div class="card center-text">
   <h1>MKS Push</h1>
   <p>Push-уведомления на ваш iPhone</p>
   <div class="links">
@@ -315,44 +517,18 @@ _INDEX_HTML = """
   </div>
 </div>
 </body>
-</html>
-"""
+</html>"""
 
-_PRIVACY_HTML = """
-<!DOCTYPE html>
+_PRIVACY_HTML = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MKS Push · Приватность</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-    background: #DCFCE7;
-    color: #0A1F12;
-    display: flex; justify-content: center;
-    min-height: 100vh; padding: 16px;
-  }
-  .card {
-    background: #fff;
-    border-radius: 20px;
-    padding: 40px 28px;
-    width: 100%; max-width: 540px;
-    box-shadow: 0 4px 24px rgba(22,163,74,.12);
-    margin: 24px 0;
-  }
-  h1 { font-size: 24px; font-weight: 700; color: #16A34A; margin-bottom: 20px; }
-  h2 { font-size: 18px; font-weight: 600; color: #0A1F12; margin: 20px 0 8px; }
-  p, li { font-size: 15px; color: #5A7D65; line-height: 1.6; }
-  ul { padding-left: 20px; margin: 8px 0 16px; }
-  a { color: #16A34A; }
-  .back { display: inline-block; margin-top: 24px; font-size: 15px; font-weight: 500; color: #16A34A; text-decoration: none; padding: 8px 16px; border-radius: 10px; background: #DCFCE7; }
-  .back:active { background: #D1E8D6; }
-</style>
+<style>{_PAGE_CSS}</style>
 </head>
 <body>
-<div class="card">
+<div class="card card-wide">
   <h1>Политика конфиденциальности</h1>
 
   <h2>Какие данные мы собираем</h2>
@@ -378,8 +554,7 @@ _PRIVACY_HTML = """
   <a class="back" href="/">← Назад</a>
 </div>
 </body>
-</html>
-"""
+</html>"""
 
 
 @app.route("/")
@@ -388,9 +563,15 @@ def index():
     return _INDEX_HTML
 
 
+@app.route("/panel")
+def panel():
+    """Test panel for manual push sending."""
+    return _PANEL_HTML
+
+
 @app.route("/privacy")
 def privacy():
-    """Privacy policy page."""
+    """Privacy policy page (Russian)."""
     return _PRIVACY_HTML
 
 

@@ -17,7 +17,7 @@ import {
 } from "@/lib/notifications";
 import { useApp } from "@/providers/app";
 
-type Phase = "idle" | "loading" | "error" | "permission_denied";
+type Phase = "idle" | "loading" | "error" | "no_slots" | "permission_denied";
 
 export default function WelcomeScreen() {
   const c = useTheme();
@@ -41,9 +41,13 @@ export default function WelcomeScreen() {
       return;
     }
 
-    const ok = await register(token);
-    if (!ok) {
-      setPhase("error");
+    const result = await register(token);
+    if (!result.success) {
+      if (result.noSlots) {
+        setPhase("no_slots");
+      } else {
+        setPhase("error");
+      }
     }
   };
 
@@ -101,6 +105,28 @@ export default function WelcomeScreen() {
             >
               <Text style={[styles.buttonText, { color: c.onAccent }]}>
                 Повторить
+              </Text>
+            </Pressable>
+          </>
+        )}
+
+        {phase === "no_slots" && (
+          <>
+            <Text style={[styles.errorText, { color: c.amber }]}>
+              Сейчас все места заняты. Попробуйте позже.
+            </Text>
+            <View style={{ height: 20 }} />
+            <Pressable
+              onPress={() => {
+                void handleStart();
+              }}
+              style={({ pressed }) => [
+                styles.button,
+                { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Text style={[styles.buttonText, { color: c.onAccent }]}>
+                Попробовать снова
               </Text>
             </Pressable>
           </>
@@ -198,8 +224,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "center",
+    lineHeight: 28,
   },
   footer: {
     fontSize: 16,

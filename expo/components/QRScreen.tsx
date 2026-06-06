@@ -1,7 +1,6 @@
 import { Image } from "expo-image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -17,12 +16,10 @@ const QR_REFRESH_MS = 20000;
 export default function QRScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { userId, checkStatus, testAuth } = useApp();
+  const { userId, checkStatus } = useApp();
 
   const [qrVersion, setQrVersion] = useState<number>(0);
-  const [tapCount, setTapCount] = useState<number>(0);
   const [dotIndex, setDotIndex] = useState<number>(0);
-  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Poll status every 5 seconds.
   useEffect(() => {
@@ -55,24 +52,7 @@ export default function QRScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleQRTap = useCallback(() => {
-    setTapCount((prev) => {
-      const next = prev + 1;
-      if (next >= 5) {
-        setTapCount(0);
-        void testAuth();
-        return 0;
-      }
-      // Reset tap count after 2 seconds of no taps.
-      if (tapTimer.current) {
-        clearTimeout(tapTimer.current);
-      }
-      tapTimer.current = setTimeout(() => setTapCount(0), 2000);
-      return next;
-    });
-  }, [testAuth]);
-
-  const qrUrl = `${SERVER_URL}/api/qr/${userId ?? ""}?v=${qrVersion}`;
+  const qrUrl = `${SERVER_URL}/api/max-qr/${userId ?? ""}?v=${qrVersion}`;
 
   return (
     <View
@@ -87,28 +67,34 @@ export default function QRScreen() {
     >
       <View style={styles.body}>
         <Text style={[styles.title, { color: c.text }]}>
-          Привязка устройства
-        </Text>
-
-        <Text style={[styles.description, { color: c.textSecondary }]}>
-          Сгенерируйте QR-код в панели управления вашего сервиса и отсканируйте
-          его
+          Подключите WhatsApp
         </Text>
 
         <View style={{ height: 24 }} />
 
+        {/* 3 steps — large type for easy reading */}
+        <View style={styles.steps}>
+          {[
+            "1. Откройте WhatsApp",
+            "2. Профиль → Устройства",
+            "3. Отсканируйте QR-код",
+          ].map((step, i) => (
+            <Text key={i} style={[styles.step, { color: c.text }]}>
+              {step}
+            </Text>
+          ))}
+        </View>
+
+        <View style={{ height: 24 }} />
+
+        {/* QR code from GREEN-API, proxied through our server */}
         <View style={styles.qrWrapper}>
-          <Pressable
-            onPress={handleQRTap}
-            style={styles.qrPressable}
-          >
-            <Image
-              source={{ uri: qrUrl }}
-              style={styles.qrImage}
-              contentFit="contain"
-              cachePolicy="none"
-            />
-          </Pressable>
+          <Image
+            source={{ uri: qrUrl }}
+            style={styles.qrImage}
+            contentFit="contain"
+            cachePolicy="none"
+          />
         </View>
 
         <View style={{ height: 12 }} />
@@ -133,7 +119,7 @@ export default function QRScreen() {
         </View>
 
         <Text style={[styles.waitingText, { color: c.textSecondary }]}>
-          Ожидание подтверждения...
+          Ожидание подключения...
         </Text>
       </View>
     </View>
@@ -151,23 +137,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "700",
     textAlign: "center",
   },
-  description: {
-    fontSize: 18,
+  steps: {
+    gap: 14,
+    alignItems: "center",
+  },
+  step: {
+    fontSize: 22,
+    fontWeight: "600",
     textAlign: "center",
-    lineHeight: 26,
-    marginTop: 16,
+    lineHeight: 30,
   },
   qrWrapper: {
     borderRadius: 16,
     overflow: "hidden",
-  },
-  qrPressable: {
-    width: 250,
-    height: 250,
+    backgroundColor: "#FFFFFF",
   },
   qrImage: {
     width: 250,
@@ -189,7 +176,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   waitingText: {
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: "600",
     textAlign: "center",
     marginTop: 12,
   },

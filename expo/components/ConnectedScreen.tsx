@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import StatusCircle from "@/components/StatusCircle";
 import { useTheme } from "@/constants/colors";
-import { useApp, type AppStatus } from "@/providers/app";
+import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 60000;
 
@@ -24,8 +24,6 @@ export default function ConnectedScreen() {
   const runCheck = useCallback(async (): Promise<void> => {
     const result = await checkStatus();
     if (mounted.current) {
-      // If the server says anything other than active, the parent will
-      // swap screens automatically via the provider's status state.
       void result;
     }
   }, [checkStatus]);
@@ -41,8 +39,8 @@ export default function ConnectedScreen() {
 
   const confirmDisconnect = (): void => {
     Alert.alert(
-      "Отключить устройство?",
-      "Вы перестанете получать уведомления от ваших сервисов.",
+      "Отключить?",
+      "Вы перестанете получать уведомления из WhatsApp.",
       [
         { text: "Отмена", style: "cancel" },
         {
@@ -72,7 +70,7 @@ export default function ConnectedScreen() {
         <StatusCircle status="active" />
 
         <Text style={[styles.statusText, { color: c.green }]}>
-          Интеграция активна
+          Уведомления из WhatsApp включены
         </Text>
 
         <Text style={[styles.subText, { color: c.textSecondary }]}>
@@ -86,7 +84,7 @@ export default function ConnectedScreen() {
           style={styles.disconnectButton}
         >
           <Text style={[styles.disconnectText, { color: c.textSecondary }]}>
-            Отключить устройство
+            Отключить
           </Text>
         </Pressable>
       </View>
