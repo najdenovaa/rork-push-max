@@ -40,7 +40,7 @@ export default function ConnectedScreen() {
   const confirmDisconnect = (): void => {
     Alert.alert(
       "Отключить?",
-      "Вы перестанете получать уведомления из WhatsApp.",
+      "Вы перестанете получать уведомления из Max.",
       [
         { text: "Отмена", style: "cancel" },
         {
@@ -70,7 +70,7 @@ export default function ConnectedScreen() {
         <StatusCircle status="active" />
 
         <Text style={[styles.statusText, { color: c.green }]}>
-          Уведомления из WhatsApp включены
+          Уведомления из Max включены
         </Text>
 
         <Text style={[styles.subText, { color: c.textSecondary }]}>

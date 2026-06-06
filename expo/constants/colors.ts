@@ -23,6 +23,7 @@ const palette = {
     blue: "#16A34A",
     green: "#22C55E",
     red: "#EF4444",
+    amber: "#F59E0B",
     onAccent: "#FFFFFF",
   },
   dark: {
@@ -35,6 +36,7 @@ const palette = {
     blue: "#22C55E",
     green: "#22C55E",
     red: "#F87171",
+    amber: "#FFB340",
     onAccent: "#FFFFFF",
   },
 } as const;

@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -19,7 +20,10 @@ export async function getPushToken(): Promise<string | null> {
     if (!Device.isDevice) {
       return `ExponentPushToken[simulator-${Platform.OS}]`;
     }
-    const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+    const projectId =
+      process.env.EXPO_PUBLIC_PROJECT_ID ||
+      Constants.expoConfig?.extra?.eas?.projectId ||
+      undefined;
     const tokenResponse = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined
     );

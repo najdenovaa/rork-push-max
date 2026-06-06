@@ -1,5 +1,6 @@
 """MKS Push — Flask backend: GREEN-API multi-tenant push notifications."""
 
+import base64
 import io
 import os
 import sqlite3
@@ -67,12 +68,26 @@ _init_db()
 
 
 def _green_qr(api_url: str, instance_id: str, api_token: str) -> bytes | None:
-    """Fetch a fresh QR code from GREEN-API. Returns raw PNG bytes or None."""
-    # GREEN-API QR endpoint: GET {apiUrl}/waInstance{id}/qr/{apiTokenInstance}
+    """Fetch a fresh QR code from GREEN-API. Returns raw PNG bytes or None.
+
+    GREEN-API returns JSON: {"type":"qrCode","message":"<base64 PNG>"}
+    We parse the JSON, decode the base64 message, and return raw PNG bytes.
+    """
     url = f"{api_url.rstrip('/')}/waInstance{instance_id}/qr/{api_token}"
     try:
         r = requests.get(url, timeout=15)
-        if r.status_code == 200 and r.headers.get("content-type", "").startswith("image/"):
+        if r.status_code != 200:
+            return None
+
+        # GREEN-API returns JSON with a base64-encoded PNG in the "message" field
+        data = r.json()
+        if isinstance(data, dict) and data.get("type") == "qrCode":
+            b64: str = data.get("message", "")
+            if b64:
+                return base64.b64decode(b64)
+
+        # Fallback: if GREEN-API returned raw image bytes (legacy behaviour)
+        if r.headers.get("content-type", "").startswith("image/"):
             return r.content
     except requests.RequestException:
         pass

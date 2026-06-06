@@ -67,7 +67,7 @@ export default function QRScreen() {
     >
       <View style={styles.body}>
         <Text style={[styles.title, { color: c.text }]}>
-          Подключите WhatsApp
+          Подключите Max
         </Text>
 
         <View style={{ height: 24 }} />
@@ -75,9 +75,9 @@ export default function QRScreen() {
         {/* 3 steps — large type for easy reading */}
         <View style={styles.steps}>
           {[
-            "1. Откройте WhatsApp",
-            "2. Профиль → Устройства",
-            "3. Отсканируйте QR-код",
+            "1. Откройте Max",
+            "2. Профиль → Устройства → Сканировать QR",
+            "3. Наведите камеру на QR-код ниже",
           ].map((step, i) => (
             <Text key={i} style={[styles.step, { color: c.text }]}>
               {step}

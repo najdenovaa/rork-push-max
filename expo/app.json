@@ -3,6 +3,11 @@
     "name": "MKS Push",
     "slug": "lnl2nmwo5fphaf5gc5xzg",
     "version": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "lnl2nmwo5fphaf5gc5xzg"
+      }
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mkspush",
