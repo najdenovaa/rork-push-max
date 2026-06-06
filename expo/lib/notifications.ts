@@ -32,18 +32,27 @@ export async function getPushToken(): Promise<string | null> {
   try {
     const permission = await requestNotificationPermission();
     if (permission !== "granted") {
+      console.log("[getPushToken] permission denied");
       return null;
     }
 
     // iOS requires explicit registration before requesting the device token.
     if (Platform.OS === "ios") {
       await Notifications.registerDeviceForRemoteMessagesAsync();
+      console.log("[getPushToken] registered for remote messages");
     }
 
-    const { data } = await Notifications.getDevicePushTokenAsync();
-    return data ?? null;
+    const result = await Notifications.getDevicePushTokenAsync();
+    const preview =
+      result.data === null || result.data === undefined
+        ? "null"
+        : String(result.data).length <= 20
+          ? String(result.data)
+          : String(result.data).slice(0, 20) + "…";
+    console.log("[getPushToken] type:", result.type, "data:", preview);
+    return result.data ?? null;
   } catch (error) {
-    console.log("[notifications] failed to get push token", error);
+    console.log("[getPushToken] exception:", error);
     return null;
   }
 }

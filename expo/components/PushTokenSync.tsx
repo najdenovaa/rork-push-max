@@ -24,9 +24,17 @@ export default function PushTokenSync() {
 
     const sync = async (): Promise<void> => {
       const permission = await requestNotificationPermission();
+      console.log("[PushTokenSync] permission:", permission);
       if (!active || permission !== "granted") return;
 
       const token = await getPushToken();
+      const tokenPreview =
+        token === null
+          ? "null"
+          : token.length <= 20
+            ? token
+            : token.slice(0, 20) + "…";
+      console.log("[PushTokenSync] token:", tokenPreview);
       if (!active || !token || isPendingPushToken(token)) return;
 
       try {
@@ -35,11 +43,12 @@ export default function PushTokenSync() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
         });
+        console.log("[PushTokenSync] POST result:", res.status, res.ok);
         if (res.ok) {
           syncedRef.current = true;
         }
       } catch (err) {
-        console.log("[PushTokenSync] failed", err);
+        console.log("[PushTokenSync] POST failed", err);
       }
     };
 
