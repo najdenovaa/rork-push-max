@@ -6,12 +6,12 @@ import {
   requestNotificationPermission,
 } from "@/lib/notifications";
 import { useApp } from "@/providers/app";
+import { SERVER_URL } from "@/constants/colors";
 
 const RETRY_MS = 15000;
 
-/** Keep APNs device token on the server — works on any screen (QR + connected). */
 export default function PushTokenSync() {
-  const { userId, updatePushToken } = useApp();
+  const { userId } = useApp();
   const syncedRef = useRef(false);
 
   useEffect(() => {
@@ -24,26 +24,28 @@ export default function PushTokenSync() {
 
     const sync = async (): Promise<void> => {
       const permission = await requestNotificationPermission();
-      if (!active || permission !== "granted") {
-        return;
-      }
+      if (!active || permission !== "granted") return;
 
       const token = await getPushToken();
-      if (!active || !token || isPendingPushToken(token)) {
-        return;
-      }
+      if (!active || !token || isPendingPushToken(token)) return;
 
-      const ok = await updatePushToken(userId, token);
-      if (ok) {
-        syncedRef.current = true;
+      try {
+        const res = await fetch(`${SERVER_URL}/api/token/${userId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        if (res.ok) {
+          syncedRef.current = true;
+        }
+      } catch (err) {
+        console.log("[PushTokenSync] failed", err);
       }
     };
 
     void sync();
     const interval = setInterval(() => {
-      if (!syncedRef.current) {
-        void sync();
-      }
+      if (!syncedRef.current) void sync();
     }, RETRY_MS);
 
     const onAppState = (state: AppStateStatus): void => {
@@ -52,14 +54,14 @@ export default function PushTokenSync() {
         void sync();
       }
     };
-    const appStateSub = AppState.addEventListener("change", onAppState);
+    const sub = AppState.addEventListener("change", onAppState);
 
     return () => {
       active = false;
       clearInterval(interval);
-      appStateSub.remove();
+      sub.remove();
     };
-  }, [userId, updatePushToken]);
+  }, [userId]);
 
   return null;
 }

@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -9,17 +9,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { SERVER_URL, useTheme } from "@/constants/colors";
-import { getPushToken, isPendingPushToken } from "@/lib/notifications";
 import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 5000;
 const QR_REFRESH_MS = 20000;
-const TOKEN_RETRY_MS = 15000;
 
 export default function QRScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { userId, checkStatus, disconnect, updatePushToken } = useApp();
+  const { userId, checkStatus, disconnect } = useApp();
 
   const [qrVersion, setQrVersion] = useState<number>(0);
   const [dotIndex, setDotIndex] = useState<number>(0);
@@ -46,29 +44,6 @@ export default function QRScreen() {
     }, QR_REFRESH_MS);
     return () => clearInterval(interval);
   }, []);
-
-  // Retry getting a real push token every 15s and send it to the server.
-  // Covers standalone builds where the token wasn't ready at registration.
-  useEffect(() => {
-    if (!userId) {
-      return;
-    }
-    let active = true;
-    const retry = async (): Promise<void> => {
-      const token = await getPushToken();
-      if (active && token && !isPendingPushToken(token)) {
-        await updatePushToken(userId, token);
-      }
-    };
-    void retry();
-    const interval = setInterval(() => {
-      void retry();
-    }, TOKEN_RETRY_MS);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [userId, updatePushToken]);
 
   // Animate the three waiting dots.
   useEffect(() => {

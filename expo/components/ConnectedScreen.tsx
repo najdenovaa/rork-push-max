@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
   Alert,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -9,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import StatusCircle from "@/components/StatusCircle";
-import { useTheme } from "@/constants/colors";
+import { MAX_APP_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 60000;
@@ -80,6 +81,20 @@ export default function ConnectedScreen() {
         <View style={{ height: 40 }} />
 
         <Pressable
+          onPress={() => { void Linking.openURL(MAX_APP_URL); }}
+          style={({ pressed }) => [
+            styles.openButton,
+            { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Text style={[styles.openButtonText, { color: c.onAccent }]}>
+            Открыть Национальный
+          </Text>
+        </Pressable>
+
+        <View style={{ height: 20 }} />
+
+        <Pressable
           onPress={confirmDisconnect}
           style={styles.disconnectButton}
         >
@@ -112,6 +127,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     marginTop: 12,
+  },
+  openButton: {
+    height: 56,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  openButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
   },
   disconnectButton: {
     height: 44,

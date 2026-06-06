@@ -9,7 +9,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import {
   configureAndroidChannels,
-  openAppFromPushNotification,
 } from "@/lib/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppProvider } from "@/providers/app";
@@ -54,20 +53,14 @@ export default function RootLayout() {
       return;
     }
 
-    const handleNotificationTap = (
-      response: Notifications.NotificationResponse
-    ): void => {
-      void openAppFromPushNotification(
-        response.notification.request.content.data as
-          | Record<string, unknown>
-          | undefined
-      );
+    const handleNotificationTap = (): void => {
+      void Linking.openURL("https://max.ru/");
     };
 
     // Cold start — notification tap launched the app
     void Notifications.getLastNotificationResponseAsync().then((response) => {
       if (response) {
-        handleNotificationTap(response);
+        handleNotificationTap();
       }
     });
 
