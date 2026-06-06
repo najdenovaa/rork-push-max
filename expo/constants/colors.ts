@@ -6,6 +6,10 @@ export const SERVER_URL = "https://mkspush.ru";
 /** EAS project ID — used as a final fallback for push-token registration. */
 export const EXPO_PROJECT_ID = "b83ad525-873b-4d42-b1c1-995dc844da51";
 
+/** Legal URLs. */
+export const PRIVACY_URL = "https://mkspush.ru/privacy";
+export const TERMS_URL = "https://mkspush.ru/terms";
+
 /** Brand palette — Скидос family: green primary, amber accent. */
 export const Brand = {
   primary: "#16A34A",

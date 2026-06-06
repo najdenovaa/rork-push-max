@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useTheme } from "@/constants/colors";
+import { PRIVACY_URL, TERMS_URL, useTheme } from "@/constants/colors";
 import {
   getPushToken,
   requestNotificationPermission,
@@ -83,7 +83,7 @@ export default function WelcomeScreen() {
         <View style={{ height: 20 }} />
 
         <Text style={[styles.description, { color: c.textSecondary }]}>
-          Получайте уведомления из Max на ваш iPhone
+          Приложение выполняет только доставку push-уведомлений с ваших веб-приложений на iPhone
         </Text>
 
         <View style={{ height: 40 }} />
@@ -169,11 +169,26 @@ export default function WelcomeScreen() {
         )}
       </View>
 
-      {phase === "idle" && (
+      {/* Footer — always visible on the start screen */}
+      <View style={styles.footerSection}>
         <Text style={[styles.footer, { color: c.textFaint }]}>
-          Приложение не читает ваши сообщения. Только уведомления.
+          Только доставка уведомлений с веб-приложений. Приложение не читает ваши сообщения.
         </Text>
-      )}
+        <View style={styles.legalLinks}>
+          <Text
+            style={[styles.legalLink, { color: c.textFaint }]}
+            onPress={() => { void Linking.openURL(PRIVACY_URL); }}
+          >
+            Политика конфиденциальности
+          </Text>
+          <Text
+            style={[styles.legalLink, { color: c.textFaint }]}
+            onPress={() => { void Linking.openURL(TERMS_URL); }}
+          >
+            Пользовательское соглашение
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -228,9 +243,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 28,
   },
+  footerSection: {
+    gap: 10,
+    paddingBottom: 8,
+  },
   footer: {
     fontSize: 16,
     textAlign: "center",
-    marginBottom: 8,
+  },
+  legalLinks: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 20,
+    flexWrap: "wrap",
+  },
+  legalLink: {
+    fontSize: 15,
+    textDecorationLine: "underline",
   },
 });

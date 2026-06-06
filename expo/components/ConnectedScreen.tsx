@@ -40,7 +40,7 @@ export default function ConnectedScreen() {
   const confirmDisconnect = (): void => {
     Alert.alert(
       "Отключить?",
-      "Вы перестанете получать уведомления из Max.",
+      "Вы перестанете получать push-уведомления с веб-приложений.",
       [
         { text: "Отмена", style: "cancel" },
         {
@@ -70,11 +70,11 @@ export default function ConnectedScreen() {
         <StatusCircle status="active" />
 
         <Text style={[styles.statusText, { color: c.green }]}>
-          Уведомления из Max включены
+          Доставка уведомлений с веб-приложений включена
         </Text>
 
         <Text style={[styles.subText, { color: c.textSecondary }]}>
-          Уведомления приходят автоматически
+          Push-уведомления с ваших веб-приложений приходят автоматически
         </Text>
 
         <View style={{ height: 40 }} />
