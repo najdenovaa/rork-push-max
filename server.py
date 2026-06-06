@@ -79,16 +79,17 @@ def _green_qr(api_url: str, instance_id: str, api_token: str) -> bytes | None:
         if r.status_code != 200:
             return None
 
-        # GREEN-API returns JSON with a base64-encoded PNG in the "message" field
+        # Check content-type first: GREEN-API may return raw PNG or JSON
+        ct: str = r.headers.get("content-type", "")
+        if ct.startswith("image/"):
+            return r.content
+
+        # Standard path: JSON with base64-encoded PNG in the "message" field
         data = r.json()
         if isinstance(data, dict) and data.get("type") == "qrCode":
             b64: str = data.get("message", "")
             if b64:
                 return base64.b64decode(b64)
-
-        # Fallback: if GREEN-API returned raw image bytes (legacy behaviour)
-        if r.headers.get("content-type", "").startswith("image/"):
-            return r.content
     except requests.RequestException:
         pass
     return None
@@ -98,7 +99,7 @@ def _green_logout(api_url: str, instance_id: str, api_token: str) -> bool:
     """Logout a GREEN-API instance (release for next user)."""
     url = f"{api_url.rstrip('/')}/waInstance{instance_id}/logout/{api_token}"
     try:
-        r = requests.post(url, timeout=10)
+        r = requests.get(url, timeout=10)
         return r.status_code == 200
     except requests.RequestException:
         return False

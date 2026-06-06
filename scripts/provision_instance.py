@@ -41,6 +41,8 @@ def main() -> None:
             json={
                 "webhookUrl": webhook_url,
                 "webhookUrlToken": "",  # Not used; we verify via URL param
+                "incomingWebhook": "yes",
+                "stateWebhook": "yes",
             },
             timeout=10,
         )
