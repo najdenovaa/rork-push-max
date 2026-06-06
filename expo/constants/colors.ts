@@ -14,7 +14,7 @@ export const Brand = {
 
 const palette = {
   light: {
-    background: "#FAFDF7",
+    background: "#DCFCE7",
     surface: "#FFFFFF",
     text: "#0A1F12",
     textSecondary: "#5A7D65",
