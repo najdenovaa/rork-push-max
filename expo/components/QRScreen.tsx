@@ -106,7 +106,7 @@ export default function QRScreen() {
 
       <View style={styles.body}>
         <Text style={[styles.title, { color: c.text }]}>
-          Подключите Max
+          Подключите Национальный
         </Text>
 
         <View style={{ height: 24 }} />
@@ -114,7 +114,7 @@ export default function QRScreen() {
         {/* 3 steps — large type for easy reading */}
         <View style={styles.steps}>
           {[
-            "1. Откройте Max",
+            "1. Откройте Национальный",
             "2. Профиль → Устройства → Сканировать QR",
             "3. Наведите камеру на QR-код ниже",
           ].map((step, i) => (
