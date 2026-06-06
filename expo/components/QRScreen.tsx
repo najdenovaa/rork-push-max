@@ -9,7 +9,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { SERVER_URL, useTheme } from "@/constants/colors";
-import { getPushToken } from "@/lib/notifications";
+import { getPushToken, isPendingPushToken } from "@/lib/notifications";
 import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 5000;
@@ -56,7 +56,7 @@ export default function QRScreen() {
     let active = true;
     const retry = async (): Promise<void> => {
       const token = await getPushToken();
-      if (active && token && !token.includes("pending")) {
+      if (active && token && !isPendingPushToken(token)) {
         await updatePushToken(userId, token);
       }
     };

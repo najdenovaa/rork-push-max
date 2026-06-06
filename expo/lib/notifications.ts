@@ -21,7 +21,7 @@ export async function requestNotificationPermission(): Promise<PermissionResult>
 
 /** Returns true when the token is a pending placeholder (not yet ready). */
 export function isPendingPushToken(token: string): boolean {
-  return token.includes("[pending");
+  return token.startsWith("pending") || token.includes("[pending");
 }
 
 /** Obtain the native APNs (iOS) or FCM (Android) device push token.
