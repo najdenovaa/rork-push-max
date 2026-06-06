@@ -85,9 +85,25 @@ export default function WelcomeScreen() {
         <View style={{ height: 40 }} />
 
         {phase === "error" && (
-          <Text style={[styles.errorText, { color: c.red }]}>
-            Не удалось подключиться. Проверьте соединение.
-          </Text>
+          <>
+            <Text style={[styles.errorText, { color: c.red }]}>
+              Сервер временно недоступен. Проверьте интернет и попробуйте снова.
+            </Text>
+            <View style={{ height: 20 }} />
+            <Pressable
+              onPress={() => {
+                void handleStart();
+              }}
+              style={({ pressed }) => [
+                styles.button,
+                { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Text style={[styles.buttonText, { color: c.onAccent }]}>
+                Повторить
+              </Text>
+            </Pressable>
+          </>
         )}
 
         {phase === "permission_denied" && (
