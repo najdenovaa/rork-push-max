@@ -1,4 +1,4 @@
-"""MaxNotify — Flask backend for push-notification companion app."""
+"""MKS Push — Flask backend for push-notification companion app."""
 
 import io
 import uuid
@@ -149,8 +149,8 @@ _PANEL_HTML = """
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-    background: #f5f5f7;
-    color: #1d1d1f;
+    background: #DCFCE7;
+    color: #0A1F12;
     display: flex; justify-content: center; align-items: center;
     min-height: 100vh; padding: 16px;
   }
@@ -159,35 +159,35 @@ _PANEL_HTML = """
     border-radius: 20px;
     padding: 32px 24px;
     width: 100%; max-width: 400px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    box-shadow: 0 4px 24px rgba(22,163,74,.12);
   }
-  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-  .sub { font-size: 15px; color: #86868b; margin-bottom: 24px; }
-  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #3a3a3c; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: #16A34A; }
+  .sub { font-size: 15px; color: #5A7D65; margin-bottom: 24px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #0A1F12; }
   input, textarea {
     width: 100%;
     font-size: 17px;
     padding: 12px 14px;
-    border: 1px solid #d2d2d7;
+    border: 1px solid #D1E8D6;
     border-radius: 12px;
     margin-bottom: 16px;
     font-family: inherit;
     -webkit-appearance: none;
   }
-  input:focus, textarea:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
+  input:focus, textarea:focus { outline: none; border-color: #16A34A; box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
   textarea { resize: vertical; min-height: 80px; }
   button {
     width: 100%;
     font-size: 18px; font-weight: 600;
     padding: 14px 0;
-    background: #007aff;
+    background: #16A34A;
     color: #fff;
     border: none;
     border-radius: 14px;
     cursor: pointer;
     transition: background .15s;
   }
-  button:active { background: #0056cc; }
+  button:active { background: #0B5D2A; }
   #result {
     margin-top: 16px;
     padding: 12px;
@@ -195,8 +195,8 @@ _PANEL_HTML = """
     font-size: 14px;
     display: none;
   }
-  #result.success { display: block; background: #e8f8ee; color: #1d7a3f; }
-  #result.error   { display: block; background: #ffe8e6; color: #c41e3a; }
+  #result.success { display: block; background: #DCFCE7; color: #0B5D2A; }
+  #result.error   { display: block; background: #FEF2F2; color: #991B1B; }
 </style>
 </head>
 <body>
@@ -262,6 +262,136 @@ function show(msg, ok) {
 def panel():
     """Simple HTML form to test push sending from a phone browser."""
     return _PANEL_HTML
+
+
+# ---------------------------------------------------------------------------
+# Public pages
+# ---------------------------------------------------------------------------
+
+_INDEX_HTML = """
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MKS Push</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: #DCFCE7;
+    color: #0A1F12;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 28px;
+    width: 100%; max-width: 400px;
+    box-shadow: 0 4px 24px rgba(22,163,74,.12);
+    text-align: center;
+  }
+  h1 { font-size: 28px; font-weight: 700; color: #16A34A; margin-bottom: 8px; }
+  p { font-size: 16px; color: #5A7D65; line-height: 1.5; }
+  .links { margin-top: 24px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .links a {
+    font-size: 15px; font-weight: 500;
+    color: #16A34A; text-decoration: none;
+    padding: 8px 16px; border-radius: 10px;
+    background: #DCFCE7;
+    transition: background .15s;
+  }
+  .links a:active { background: #D1E8D6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>MKS Push</h1>
+  <p>Push-уведомления на ваш iPhone</p>
+  <div class="links">
+    <a href="/panel">Панель тестирования</a>
+    <a href="/privacy">Приватность</a>
+  </div>
+</div>
+</body>
+</html>
+"""
+
+_PRIVACY_HTML = """
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MKS Push · Приватность</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: #DCFCE7;
+    color: #0A1F12;
+    display: flex; justify-content: center;
+    min-height: 100vh; padding: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 28px;
+    width: 100%; max-width: 540px;
+    box-shadow: 0 4px 24px rgba(22,163,74,.12);
+    margin: 24px 0;
+  }
+  h1 { font-size: 24px; font-weight: 700; color: #16A34A; margin-bottom: 20px; }
+  h2 { font-size: 18px; font-weight: 600; color: #0A1F12; margin: 20px 0 8px; }
+  p, li { font-size: 15px; color: #5A7D65; line-height: 1.6; }
+  ul { padding-left: 20px; margin: 8px 0 16px; }
+  a { color: #16A34A; }
+  .back { display: inline-block; margin-top: 24px; font-size: 15px; font-weight: 500; color: #16A34A; text-decoration: none; padding: 8px 16px; border-radius: 10px; background: #DCFCE7; }
+  .back:active { background: #D1E8D6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Политика конфиденциальности</h1>
+
+  <h2>Какие данные мы собираем</h2>
+  <p>Приложение собирает:</p>
+  <ul>
+    <li>Push-токен устройства (Expo Push Token) — для доставки уведомлений</li>
+    <li>Уникальный идентификатор пользователя (user_id) — для привязки устройства</li>
+  </ul>
+
+  <h2>Как мы используем данные</h2>
+  <p>Данные отправляются на сервер <code>https://mkspush.ru</code> и используются исключительно для отправки push-уведомлений на ваше устройство.</p>
+
+  <h2>Что мы НЕ делаем</h2>
+  <ul>
+    <li>Не читаем содержимое ваших сообщений</li>
+    <li>Не передаём данные третьим лицам</li>
+    <li>Не используем данные для рекламы или трекинга</li>
+  </ul>
+
+  <h2>Удаление данных</h2>
+  <p>При отключении устройства данные удаляются с сервера. Вы можете запросить удаление, написав на <a href="mailto:support@mkspush.ru">support@mkspush.ru</a>.</p>
+
+  <a class="back" href="/">← Назад</a>
+</div>
+</body>
+</html>
+"""
+
+
+@app.route("/")
+def index():
+    """Landing page."""
+    return _INDEX_HTML
+
+
+@app.route("/privacy")
+def privacy():
+    """Privacy policy page."""
+    return _PRIVACY_HTML
 
 
 # ---------------------------------------------------------------------------
