@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import qrcode
+import requests
 from flask import Flask, jsonify, request, send_file
 
 app = Flask(__name__)
@@ -93,12 +94,174 @@ def test_auth(userId: str):
     return jsonify({"status": "active"})
 
 
+@app.route("/api/send/<userId>", methods=["POST"])
+def send_push(userId: str):
+    """Send a push notification to the user via Expo Push API."""
+    session = _sessions.get(userId)
+    if session is None:
+        return jsonify({"error": "unknown user"}), 404
+
+    body = request.get_json(silent=True) or {}
+    title = body.get("title")
+    message = body.get("body")
+
+    if not title or not message:
+        return jsonify({"error": "missing title or body"}), 400
+
+    payload = {
+        "to": session.token,
+        "title": title,
+        "body": message,
+        "data": body.get("data", {}),
+    }
+
+    try:
+        r = requests.post(
+            "https://exp.host/--/api/v2/push/send",
+            json=payload,
+            timeout=10,
+        )
+        return jsonify(r.json()), r.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 502
+
+
 @app.route("/api/disconnect/<userId>", methods=["POST"])
 def disconnect(userId: str):
     """Remove the session."""
     if userId in _sessions:
         del _sessions[userId]
     return jsonify({"status": "disconnected"})
+
+
+# ---------------------------------------------------------------------------
+# Test panel (HTML)
+# ---------------------------------------------------------------------------
+
+_PANEL_HTML = """
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MKS Push · Панель</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 32px 24px;
+    width: 100%; max-width: 400px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .sub { font-size: 15px; color: #86868b; margin-bottom: 24px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #3a3a3c; }
+  input, textarea {
+    width: 100%;
+    font-size: 17px;
+    padding: 12px 14px;
+    border: 1px solid #d2d2d7;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+  input:focus, textarea:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
+  textarea { resize: vertical; min-height: 80px; }
+  button {
+    width: 100%;
+    font-size: 18px; font-weight: 600;
+    padding: 14px 0;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:active { background: #0056cc; }
+  #result {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    display: none;
+  }
+  #result.success { display: block; background: #e8f8ee; color: #1d7a3f; }
+  #result.error   { display: block; background: #ffe8e6; color: #c41e3a; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>MKS Push</h1>
+  <p class="sub">Тестовая отправка push-уведомления</p>
+
+  <label for="uid">User ID</label>
+  <input id="uid" type="text" placeholder="abc123…" autocomplete="off">
+
+  <label for="t">Заголовок</label>
+  <input id="t" type="text" placeholder="Привет!" autocomplete="off">
+
+  <label for="b">Текст</label>
+  <textarea id="b" placeholder="Ваше уведомление…"></textarea>
+
+  <button onclick="send()">Отправить</button>
+  <div id="result"></div>
+</div>
+
+<script>
+async function send() {
+  const uid = document.getElementById("uid").value.trim();
+  const title = document.getElementById("t").value.trim();
+  const body = document.getElementById("b").value.trim();
+  const res = document.getElementById("result");
+
+  if (!uid) { show("Введите User ID", false); return; }
+  if (!title || !body) { show("Заполните заголовок и текст", false); return; }
+
+  try {
+    const r = await fetch(`/api/send/${uid}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, body }),
+    });
+    const data = await r.json();
+    if (r.ok && data.data?.status === "ok") {
+      show("Пуш отправлен ✓", true);
+    } else if (r.ok) {
+      show("Ответ Expo: " + JSON.stringify(data), true);
+    } else {
+      show(data.error || "Ошибка", false);
+    }
+  } catch (e) {
+    show("Сеть: " + e.message, false);
+  }
+}
+
+function show(msg, ok) {
+  const el = document.getElementById("result");
+  el.textContent = msg;
+  el.className = ok ? "success" : "error";
+  el.style.display = "block";
+}
+</script>
+</body>
+</html>
+"""
+
+
+@app.route("/panel")
+def panel():
+    """Simple HTML form to test push sending from a phone browser."""
+    return _PANEL_HTML
 
 
 # ---------------------------------------------------------------------------
