@@ -1,0 +1,48 @@
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+
+export type PermissionResult = "granted" | "denied";
+
+export async function requestNotificationPermission(): Promise<PermissionResult> {
+  const settings = await Notifications.getPermissionsAsync();
+  let status = settings.status;
+  if (status !== "granted") {
+    const request = await Notifications.requestPermissionsAsync();
+    status = request.status;
+  }
+  return status === "granted" ? "granted" : "denied";
+}
+
+export async function getPushToken(): Promise<string | null> {
+  try {
+    if (!Device.isDevice) {
+      return `ExponentPushToken[simulator-${Platform.OS}]`;
+    }
+    const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+    const tokenResponse = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    );
+    return tokenResponse.data;
+  } catch (error) {
+    console.log("[notifications] failed to get push token", error);
+    return null;
+  }
+}
+
+export async function configureAndroidChannels(): Promise<void> {
+  if (Platform.OS !== "android") {
+    return;
+  }
+  await Notifications.setNotificationChannelAsync("calls", {
+    name: "Звонки",
+    importance: Notifications.AndroidImportance.MAX,
+    sound: "default",
+    vibrationPattern: [0, 500, 200, 500],
+  });
+  await Notifications.setNotificationChannelAsync("messages", {
+    name: "Сообщения",
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: "default",
+  });
+}
