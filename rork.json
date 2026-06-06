@@ -3,7 +3,10 @@
     {
       "name": "MAX Notify",
       "path": "expo",
-      "framework": "react-native"
+      "framework": "react-native",
+      "settings": {
+        "displayName": "Msk push"
+      }
     }
   ],
   "$schema": "https://rork.com/schema/rork.json"

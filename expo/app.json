@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MKS Push",
+    "name": "Msk push",
     "slug": "lnl2nmwo5fphaf5gc5xzg",
     "version": "1.0.0",
     "extra": {
@@ -23,7 +23,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.rork.lnl2nmwo5fphaf5gc5xzg",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
