@@ -19,9 +19,9 @@
       "backgroundColor": "#DCFCE7"
     },
     "ios": {
-      "buildNumber": "6",
+      "buildNumber": "8",
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.lnl2nmwo5fphaf5gc5xzg",
+      "bundleIdentifier": "ru.mskpush.app",
       "entitlements": {
         "aps-environment": "production"
       },
@@ -36,7 +36,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#DCFCE7"
       },
-      "package": "app.rork.lnl2nmwo5fphaf5gc5xzg"
+      "package": "ru.mskpush.app"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
