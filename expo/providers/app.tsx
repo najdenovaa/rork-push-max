@@ -8,6 +8,8 @@ const USER_ID_KEY = "user_id";
 
 export type AppStatus = "unknown" | "pending" | "active";
 
+export type PairingPhase = "qr" | "needs_2fa" | "active" | "unknown";
+
 export type ConnectResult = {
   success: boolean;
 };
@@ -29,6 +31,8 @@ async function fetchWithTimeout(
 export const [AppProvider, useApp] = createContextHook(() => {
   const [userId, setUserId] = useState<string | null>(null);
   const [status, setStatus] = useState<AppStatus>("unknown");
+  const [pairing, setPairing] = useState<PairingPhase>("unknown");
+  const [pairingHint, setPairingHint] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   // Load persisted user_id on mount.
@@ -72,6 +76,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const data: { user_id: string } = (await res.json()) as { user_id: string };
       setUserId(data.user_id);
       setStatus("pending");
+      setPairing("qr");
+      setPairingHint(null);
       await AsyncStorage.setItem(USER_ID_KEY, data.user_id);
       return { success: true };
     } catch (err) {
@@ -111,7 +117,23 @@ export const [AppProvider, useApp] = createContextHook(() => {
       if (!res.ok) {
         return "pending";
       }
-      const data: { status: string } = (await res.json()) as { status: string };
+      const data = (await res.json()) as {
+        status: string;
+        pairing?: string;
+        hint?: string | null;
+      };
+
+      if (data.pairing === "needs_2fa") {
+        setPairing("needs_2fa");
+        setPairingHint(data.hint ?? null);
+      } else if (data.pairing === "active" || data.status === "active") {
+        setPairing("active");
+        setPairingHint(null);
+      } else {
+        setPairing("qr");
+        setPairingHint(null);
+      }
+
       const newStatus: AppStatus =
         data.status === "active" ? "active" : "pending";
       setStatus(newStatus);
@@ -119,6 +141,25 @@ export const [AppProvider, useApp] = createContextHook(() => {
     } catch (err) {
       console.log("[app] status check failed", err);
       return "pending";
+    }
+  }, [userId]);
+
+  /** Submit 2FA password after QR scan when pairing === needs_2fa. */
+  const submit2fa = useCallback(async (password: string): Promise<boolean> => {
+    if (!userId) return false;
+    try {
+      const res = await fetchWithTimeout(
+        `${SERVER_URL}/api/2fa/${userId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        }
+      );
+      return res.ok;
+    } catch (err) {
+      console.log("[app] submit2fa failed", err);
+      return false;
     }
   }, [userId]);
 
@@ -142,16 +183,21 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
     setUserId(null);
     setStatus("unknown");
+    setPairing("unknown");
+    setPairingHint(null);
   }, [userId]);
 
   return {
     userId,
     status,
+    pairing,
+    pairingHint,
     isLoaded,
     connect,
     register: connect,
     updatePushToken,
     checkStatus,
+    submit2fa,
     disconnect,
   };
 });
