@@ -9,33 +9,46 @@ export default function SiblingAppsLinks() {
   const c = useTheme();
 
   return (
-    <View style={styles.row}>
-      {SIBLING_APPS.map((app) => (
-        <Pressable
-          key={app.name}
-          onPress={() => {
-            void Linking.openURL(app.appStoreUrl);
-          }}
-          style={({ pressed }) => [
-            styles.item,
-            { opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Image
-            source={app.icon}
-            style={styles.icon}
-            contentFit="cover"
-          />
-          <Text style={[styles.label, { color: c.textSecondary }]}>
-            {app.name}
-          </Text>
-        </Pressable>
-      ))}
+    <View style={styles.wrapper}>
+      <Text style={[styles.heading, { color: c.textSecondary }]}>
+        Мои проекты
+      </Text>
+      <View style={styles.row}>
+        {SIBLING_APPS.map((app) => (
+          <Pressable
+            key={app.name}
+            onPress={() => {
+              void Linking.openURL(app.appStoreUrl);
+            }}
+            style={({ pressed }) => [
+              styles.item,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Text style={[styles.label, { color: c.textSecondary }]}>
+              {app.name}
+            </Text>
+            <Image
+              source={app.icon}
+              style={styles.icon}
+              contentFit="cover"
+            />
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    alignItems: "center",
+    gap: 12,
+  },
+  heading: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
   row: {
     flexDirection: "row",
     justifyContent: "center",
