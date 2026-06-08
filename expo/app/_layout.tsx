@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { LINKED_APP_URL } from "@/constants/colors";
 import {
   configureAndroidChannels,
 } from "@/lib/notifications";
@@ -54,7 +55,7 @@ export default function RootLayout() {
     }
 
     const handleNotificationTap = (): void => {
-      void Linking.openURL("https://max.ru/");
+      void Linking.openURL(LINKED_APP_URL);
     };
 
     // Cold start — notification tap launched the app

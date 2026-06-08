@@ -7,10 +7,13 @@ export const SERVER_URL = "https://mkspush.ru";
 export const PRIVACY_URL = "https://mkspush.ru/privacy";
 export const TERMS_URL = "https://mkspush.ru/terms";
 
-/** URL to open on push notification tap. */
-export const MAX_APP_URL = "https://max.ru/";
+/** URL linked web app — opened when user taps a push notification. */
+export const LINKED_APP_URL = "https://max.ru/";
 
-/** Brand palette — Скидос family: green primary, amber accent. */
+/** Expo project ID for push notifications in standalone builds. */
+export const EXPO_PROJECT_ID = "b83ad525-873b-4d42-b1c1-995dc844da51";
+
+/** Brand palette — green primary, amber accent. */
 export const Brand = {
   primary: "#16A34A",
   green: "#22C55E",

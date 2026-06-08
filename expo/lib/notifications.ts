@@ -1,7 +1,7 @@
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { MAX_APP_URL } from "@/constants/colors";
+import { EXPO_PROJECT_ID, LINKED_APP_URL } from "@/constants/colors";
 
 export type PermissionResult = "granted" | "denied";
 
@@ -31,7 +31,9 @@ export async function getPushToken(): Promise<string | null> {
   try {
     const permission = await requestNotificationPermission();
     if (permission !== "granted") return null;
-    const { data } = await Notifications.getExpoPushTokenAsync();
+    const { data } = await Notifications.getExpoPushTokenAsync({
+      projectId: EXPO_PROJECT_ID,
+    });
     return data ?? null;
   } catch (error) {
     console.log("[notifications] failed to get push token", error);
@@ -40,12 +42,12 @@ export async function getPushToken(): Promise<string | null> {
 }
 
 /** Resolve which URL to open when a push notification is tapped.
- *  Prefers `data.url` from the payload, falls back to MAX_APP_URL. */
+ *  Prefers `data.url` from the payload, falls back to the linked web app. */
 export function resolvePushOpenUrl(data: Record<string, unknown> | undefined): string {
   if (data?.url != null && typeof data.url === "string" && data.url.length > 0) {
     return data.url;
   }
-  return MAX_APP_URL;
+  return LINKED_APP_URL;
 }
 
 /** Open the app/URL configured for this push notification.

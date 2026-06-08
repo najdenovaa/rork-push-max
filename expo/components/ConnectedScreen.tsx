@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import StatusCircle from "@/components/StatusCircle";
-import { MAX_APP_URL, useTheme } from "@/constants/colors";
+import { LINKED_APP_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 60000;
@@ -81,7 +81,7 @@ export default function ConnectedScreen() {
         <View style={{ height: 40 }} />
 
         <Pressable
-          onPress={() => { void Linking.openURL(MAX_APP_URL); }}
+          onPress={() => { void Linking.openURL(LINKED_APP_URL); }}
           style={({ pressed }) => [
             styles.openButton,
             { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },

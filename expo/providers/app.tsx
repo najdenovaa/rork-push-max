@@ -80,9 +80,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, []);
 
-  /** Push the latest APNs device token to the server for this user.
-   *  Used by QRScreen to retry token delivery in standalone builds where the
-   *  token may not be ready at registration time. */
+  /** Expo push token; синхронизация через PushTokenSync. */
   const updatePushToken = useCallback(
     async (id: string, token: string): Promise<boolean> => {
       try {

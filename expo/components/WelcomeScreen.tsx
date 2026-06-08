@@ -2,7 +2,6 @@ import * as Linking from "expo-linking";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
