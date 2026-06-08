@@ -25,14 +25,14 @@ export default function SiblingAppsLinks() {
               { opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Text style={[styles.label, { color: c.textSecondary }]}>
-              {app.name}
-            </Text>
             <Image
               source={app.icon}
               style={styles.icon}
               contentFit="cover"
             />
+            <Text style={[styles.label, { color: c.textSecondary }]}>
+              {app.name}
+            </Text>
           </Pressable>
         ))}
       </View>
