@@ -7,9 +7,10 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { LINKED_APP_URL } from "@/constants/colors";
 import {
+  clearLastNotificationResponse,
   configureAndroidChannels,
+  openAppFromPushNotification,
 } from "@/lib/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppProvider } from "@/providers/app";
@@ -30,7 +31,6 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
   useEffect(() => {
-    void SplashScreen.hideAsync();
     void configureAndroidChannels();
 
     // Handle deep link on cold start (mkspush://pair?user_id=XXX)
@@ -51,18 +51,27 @@ export default function RootLayout() {
     });
 
     if (Platform.OS === "web") {
+      void SplashScreen.hideAsync();
       return;
     }
 
-    const handleNotificationTap = (): void => {
-      void Linking.openURL(LINKED_APP_URL);
+    const handleNotificationTap = (
+      response: Notifications.NotificationResponse
+    ): void => {
+      const data =
+        response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined;
+      void openAppFromPushNotification(data);
+      void clearLastNotificationResponse();
     };
 
     // Cold start — notification tap launched the app
     void Notifications.getLastNotificationResponseAsync().then((response) => {
       if (response) {
-        handleNotificationTap();
+        handleNotificationTap(response);
       }
+      void SplashScreen.hideAsync();
     });
 
     const subscription =

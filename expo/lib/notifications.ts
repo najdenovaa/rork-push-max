@@ -3,6 +3,17 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { EXPO_PROJECT_ID, LINKED_APP_URL } from "@/constants/colors";
 
+/** Only allow hostname max.ru and *.max.ru for push-tap URLs. */
+function isAllowedMaxUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+    return hostname === "max.ru" || hostname.endsWith(".max.ru");
+  } catch {
+    return false;
+  }
+}
+
 export type PermissionResult = "granted" | "denied";
 
 export async function requestNotificationPermission(): Promise<PermissionResult> {
@@ -42,29 +53,34 @@ export async function getPushToken(): Promise<string | null> {
 }
 
 /** Resolve which URL to open when a push notification is tapped.
- *  Prefers `data.url` from the payload, falls back to the linked web app. */
+ *  Uses `data.url` only when it matches max.ru / *.max.ru; falls back to the linked web app. */
 export function resolvePushOpenUrl(data: Record<string, unknown> | undefined): string {
   if (data?.url != null && typeof data.url === "string" && data.url.length > 0) {
-    return data.url;
+    if (isAllowedMaxUrl(data.url)) {
+      return data.url;
+    }
   }
   return LINKED_APP_URL;
 }
 
-/** Open the app/URL configured for this push notification.
- *  Checks `canOpenURL` first to avoid crashes on iOS. */
+/** Open the app/URL configured for this push notification. */
 export async function openAppFromPushNotification(
   data: Record<string, unknown> | undefined
 ): Promise<void> {
   const url = resolvePushOpenUrl(data);
   try {
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      await Linking.openURL(url);
-    } else {
-      console.log("[notifications] cannot open url", url);
-    }
+    await Linking.openURL(url);
   } catch (error) {
     console.log("[notifications] failed to open url", url, error);
+  }
+}
+
+/** Clear the last notification response so the same tap is not replayed. */
+export async function clearLastNotificationResponse(): Promise<void> {
+  try {
+    await Notifications.clearLastNotificationResponseAsync();
+  } catch (error) {
+    console.log("[notifications] failed to clear last notification response", error);
   }
 }
 

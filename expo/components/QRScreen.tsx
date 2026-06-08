@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { SERVER_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
+import SiblingAppsLinks from "@/components/SiblingAppsLinks";
 
 const POLL_INTERVAL_MS = 5000;
 const QR_REFRESH_MS = 20000;
@@ -269,6 +270,11 @@ export default function QRScreen() {
           Ожидание подключения...
         </Text>
       </View>
+
+      {/* Footer — only in QR mode, not 2FA */}
+      <View style={styles.footerSection}>
+        <SiblingAppsLinks />
+      </View>
     </View>
   );
 }
@@ -382,5 +388,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 26,
     maxWidth: 320,
+  },
+  footerSection: {
+    paddingBottom: 8,
   },
 });

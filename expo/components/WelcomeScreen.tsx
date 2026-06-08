@@ -15,6 +15,7 @@ import {
   requestNotificationPermission,
 } from "@/lib/notifications";
 import { useApp } from "@/providers/app";
+import SiblingAppsLinks from "@/components/SiblingAppsLinks";
 
 type Phase = "idle" | "loading" | "error" | "permission_denied";
 
@@ -144,6 +145,10 @@ export default function WelcomeScreen() {
 
       {/* Footer — always visible on the start screen */}
       <View style={styles.footerSection}>
+        <SiblingAppsLinks />
+
+        <View style={{ height: 8 }} />
+
         <Text style={[styles.footer, { color: c.textFaint }]}>
           Приложение не читает ваши сообщения. Только доставка уведомлений.
         </Text>
