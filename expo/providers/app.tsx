@@ -8,10 +8,8 @@ const USER_ID_KEY = "user_id";
 
 export type AppStatus = "unknown" | "pending" | "active";
 
-export type RegisterResult = {
+export type ConnectResult = {
   success: boolean;
-  /** true when server returns 503 — no free GREEN-API slots. */
-  noSlots?: boolean;
 };
 
 async function fetchWithTimeout(
@@ -55,22 +53,17 @@ export const [AppProvider, useApp] = createContextHook(() => {
     };
   }, []);
 
-  /** Register with the server and get assigned a GREEN-API instance.
-   *  Returns `{ success: false, noSlots: true }` when all slots are taken. */
-  const register = useCallback(async (token: string): Promise<RegisterResult> => {
+  /** Connect to the server — get a user_id and start pairing. */
+  const connect = useCallback(async (token: string): Promise<ConnectResult> => {
     try {
       const res = await fetchWithTimeout(
-        `${SERVER_URL}/api/register`,
+        `${SERVER_URL}/api/connect`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ push_token: token }),
         }
       );
-
-      if (res.status === 503) {
-        return { success: false, noSlots: true };
-      }
 
       if (!res.ok) {
         return { success: false };
@@ -82,7 +75,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       await AsyncStorage.setItem(USER_ID_KEY, data.user_id);
       return { success: true };
     } catch (err) {
-      console.log("[app] register failed", err);
+      console.log("[app] connect failed", err);
       return { success: false };
     }
   }, []);
@@ -131,7 +124,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, [userId]);
 
-  /** Disconnect: logout GREEN-API instance, clear storage, reset state. */
+  /** Disconnect: clear storage, reset state. */
   const disconnect = useCallback(async (): Promise<void> => {
     if (!userId) {
       return;
@@ -157,7 +150,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     userId,
     status,
     isLoaded,
-    register,
+    connect,
+    register: connect,
     updatePushToken,
     checkStatus,
     disconnect,

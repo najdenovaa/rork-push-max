@@ -17,12 +17,12 @@ import {
 } from "@/lib/notifications";
 import { useApp } from "@/providers/app";
 
-type Phase = "idle" | "loading" | "error" | "no_slots" | "permission_denied";
+type Phase = "idle" | "loading" | "error" | "permission_denied";
 
 export default function WelcomeScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { register } = useApp();
+  const { connect } = useApp();
 
   const [phase, setPhase] = useState<Phase>("idle");
 
@@ -41,13 +41,9 @@ export default function WelcomeScreen() {
     const token =
       (await getPushToken()) ?? "pending-expo";
 
-    const result = await register(token);
+    const result = await connect(token);
     if (!result.success) {
-      if (result.noSlots) {
-        setPhase("no_slots");
-      } else {
-        setPhase("error");
-      }
+      setPhase("error");
     }
   };
 
@@ -77,13 +73,13 @@ export default function WelcomeScreen() {
         <Text style={[styles.title, { color: c.text }]}>MKS Push</Text>
 
         <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-          Push-уведомления на ваш iPhone
+          Умные уведомления
         </Text>
 
         <View style={{ height: 20 }} />
 
         <Text style={[styles.description, { color: c.textSecondary }]}>
-          Приложение выполняет только доставку push-уведомлений с ваших веб-приложений на iPhone
+          Ваши данные в безопасности. Мы не читаем ваши сообщения.
         </Text>
 
         <View style={{ height: 40 }} />
@@ -105,28 +101,6 @@ export default function WelcomeScreen() {
             >
               <Text style={[styles.buttonText, { color: c.onAccent }]}>
                 Повторить
-              </Text>
-            </Pressable>
-          </>
-        )}
-
-        {phase === "no_slots" && (
-          <>
-            <Text style={[styles.errorText, { color: c.amber }]}>
-              Сейчас все места заняты. Попробуйте позже.
-            </Text>
-            <View style={{ height: 20 }} />
-            <Pressable
-              onPress={() => {
-                void handleStart();
-              }}
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <Text style={[styles.buttonText, { color: c.onAccent }]}>
-                Попробовать снова
               </Text>
             </Pressable>
           </>
@@ -172,7 +146,7 @@ export default function WelcomeScreen() {
       {/* Footer — always visible on the start screen */}
       <View style={styles.footerSection}>
         <Text style={[styles.footer, { color: c.textFaint }]}>
-          Только доставка уведомлений с веб-приложений. Приложение не читает ваши сообщения.
+          Приложение не читает ваши сообщения. Только доставка уведомлений.
         </Text>
         <View style={styles.legalLinks}>
           <Text

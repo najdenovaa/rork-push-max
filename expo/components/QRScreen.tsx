@@ -101,7 +101,7 @@ export default function QRScreen() {
 
         <View style={{ height: 24 }} />
 
-        {/* QR code from GREEN-API, proxied through our server */}
+        {/* QR code from server */}
         <View style={styles.qrWrapper}>
           <Image
             source={{ uri: qrUrl }}
