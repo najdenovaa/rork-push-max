@@ -1,7 +1,7 @@
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { EXPO_PROJECT_ID, LINKED_APP_URL } from "@/constants/colors";
+import { EXPO_PROJECT_ID, LINKED_APP_SCHEME, LINKED_APP_URL } from "@/constants/colors";
 
 /** Only allow hostname max.ru and *.max.ru for push-tap URLs. */
 function isAllowedMaxUrl(url: string): boolean {
@@ -63,16 +63,37 @@ export function resolvePushOpenUrl(data: Record<string, unknown> | undefined): s
   return LINKED_APP_URL;
 }
 
+/** Convert an https://max.ru URL to the native max:// scheme. */
+function toNativeMaxUrl(httpsUrl: string): string {
+  try {
+    const parsed = new URL(httpsUrl);
+    return `${LINKED_APP_SCHEME}://${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return `${LINKED_APP_SCHEME}://`;
+  }
+}
+
+/** Open the linked app via its native URL scheme, falling back to https. */
+export async function openLinkedApp(httpsUrl?: string): Promise<void> {
+  const url = httpsUrl ?? LINKED_APP_URL;
+  const nativeUrl = toNativeMaxUrl(url);
+  try {
+    await Linking.openURL(nativeUrl);
+  } catch {
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.log("[notifications] failed to open both native and https", error);
+    }
+  }
+}
+
 /** Open the app/URL configured for this push notification. */
 export async function openAppFromPushNotification(
   data: Record<string, unknown> | undefined
 ): Promise<void> {
   const url = resolvePushOpenUrl(data);
-  try {
-    await Linking.openURL(url);
-  } catch (error) {
-    console.log("[notifications] failed to open url", url, error);
-  }
+  await openLinkedApp(url);
 }
 
 /** Clear the last notification response so the same tap is not replayed. */

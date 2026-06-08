@@ -19,9 +19,12 @@
       "backgroundColor": "#DCFCE7"
     },
     "ios": {
-      "buildNumber": "12",
+      "buildNumber": "13",
       "supportsTablet": false,
-      "bundleIdentifier": "ru.mskpush.app"
+      "bundleIdentifier": "ru.mskpush.app",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["max"]
+      }
     },
     "android": {
       "adaptiveIcon": {

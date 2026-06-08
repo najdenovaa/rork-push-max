@@ -10,6 +10,9 @@ export const TERMS_URL = "https://mkspush.ru/terms";
 /** URL linked web app — opened when user taps a push notification. */
 export const LINKED_APP_URL = "https://max.ru/";
 
+/** Custom URL scheme for the linked app — used to open the native app instead of Safari. */
+export const LINKED_APP_SCHEME = "max";
+
 /** Expo project ID for push notifications in standalone builds. */
 export const EXPO_PROJECT_ID = "b83ad525-873b-4d42-b1c1-995dc844da51";
 

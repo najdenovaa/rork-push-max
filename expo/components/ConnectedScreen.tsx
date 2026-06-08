@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
   Alert,
-  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -10,7 +9,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import StatusCircle from "@/components/StatusCircle";
-import { LINKED_APP_URL, useTheme } from "@/constants/colors";
+import { useTheme } from "@/constants/colors";
+import { openLinkedApp } from "@/lib/notifications";
 import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 60000;
@@ -81,7 +81,7 @@ export default function ConnectedScreen() {
         <View style={{ height: 40 }} />
 
         <Pressable
-          onPress={() => { void Linking.openURL(LINKED_APP_URL); }}
+          onPress={() => { void openLinkedApp(); }}
           style={({ pressed }) => [
             styles.openButton,
             { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
