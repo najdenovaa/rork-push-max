@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,9 +10,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import BackButton from "@/components/BackButton";
 import { SERVER_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
-import SiblingAppsLinks from "@/components/SiblingAppsLinks";
 
 const POLL_INTERVAL_MS = 5000;
 const QR_REFRESH_MS = 20000;
@@ -93,18 +93,7 @@ export default function QRScreen() {
           },
         ]}
       >
-        {/* Back button */}
-        <Pressable
-          onPress={() => void disconnect()}
-          style={({ pressed }) => [
-            styles.backButton,
-            { opacity: pressed ? 0.6 : 1 },
-          ]}
-          hitSlop={12}
-        >
-          <Text style={[styles.backArrow, { color: c.blue }]}>←</Text>
-          <Text style={[styles.backLabel, { color: c.blue }]}>Назад</Text>
-        </Pressable>
+        <BackButton onPress={() => void disconnect()} />
 
         <View style={styles.body}>
           <Text style={[styles.title, { color: c.text }]}>
@@ -200,18 +189,7 @@ export default function QRScreen() {
         },
       ]}
     >
-      {/* Back button — return to WelcomeScreen */}
-      <Pressable
-        onPress={() => void disconnect()}
-        style={({ pressed }) => [
-          styles.backButton,
-          { opacity: pressed ? 0.6 : 1 },
-        ]}
-        hitSlop={12}
-      >
-        <Text style={[styles.backArrow, { color: c.blue }]}>←</Text>
-        <Text style={[styles.backLabel, { color: c.blue }]}>Назад</Text>
-      </Pressable>
+      <BackButton onPress={() => void disconnect()} />
 
       <View style={styles.body}>
         <Text style={[styles.title, { color: c.text }]}>
@@ -271,10 +249,6 @@ export default function QRScreen() {
         </Text>
       </View>
 
-      {/* Footer — only in QR mode, not 2FA */}
-      <View style={styles.footerSection}>
-        <SiblingAppsLinks />
-      </View>
     </View>
   );
 }
@@ -312,21 +286,6 @@ const styles = StyleSheet.create({
   qrImage: {
     width: 250,
     height: 250,
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-  },
-  backArrow: {
-    fontSize: 24,
-    fontWeight: "600",
-  },
-  backLabel: {
-    fontSize: 18,
-    fontWeight: "600",
   },
   qrHint: {
     fontSize: 16,
@@ -388,8 +347,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 26,
     maxWidth: 320,
-  },
-  footerSection: {
-    paddingBottom: 8,
   },
 });

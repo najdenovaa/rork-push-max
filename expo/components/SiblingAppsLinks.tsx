@@ -26,7 +26,7 @@ export default function SiblingAppsLinks() {
             ]}
           >
             <Image
-              source={app.icon}
+              source={app.icon as number}
               style={styles.icon}
               contentFit="cover"
             />

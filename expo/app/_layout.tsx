@@ -22,6 +22,8 @@ void SplashScreen.preventAutoHideAsync();
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -67,12 +69,18 @@ export default function RootLayout() {
     };
 
     // Cold start — notification tap launched the app
-    void Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        handleNotificationTap(response);
-      }
-      void SplashScreen.hideAsync();
-    });
+    void Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (response) {
+          handleNotificationTap(response);
+        }
+      })
+      .catch((error) => {
+        console.log("[layout] failed to get last notification response", error);
+      })
+      .finally(() => {
+        void SplashScreen.hideAsync();
+      });
 
     const subscription =
       Notifications.addNotificationResponseReceivedListener(

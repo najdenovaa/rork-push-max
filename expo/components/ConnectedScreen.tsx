@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import BackButton from "@/components/BackButton";
+import SiblingAppsLinks from "@/components/SiblingAppsLinks";
 import StatusCircle from "@/components/StatusCircle";
 import { useTheme } from "@/constants/colors";
 import { openLinkedApp } from "@/lib/notifications";
@@ -22,21 +24,16 @@ export default function ConnectedScreen() {
 
   const mounted = useRef<boolean>(true);
 
-  const runCheck = useCallback(async (): Promise<void> => {
-    const result = await checkStatus();
-    if (mounted.current) {
-      void result;
-    }
-  }, [checkStatus]);
-
   useEffect(() => {
     mounted.current = true;
-    const interval = setInterval(runCheck, POLL_INTERVAL_MS);
+    const interval = setInterval(() => {
+      void checkStatus();
+    }, POLL_INTERVAL_MS);
     return () => {
       mounted.current = false;
       clearInterval(interval);
     };
-  }, [runCheck]);
+  }, [checkStatus]);
 
   const confirmDisconnect = (): void => {
     Alert.alert(
@@ -67,6 +64,8 @@ export default function ConnectedScreen() {
         },
       ]}
     >
+      <BackButton onPress={() => void disconnect()} />
+
       <View style={styles.body}>
         <StatusCircle status="active" />
 
@@ -103,6 +102,8 @@ export default function ConnectedScreen() {
           </Text>
         </Pressable>
       </View>
+
+      <SiblingAppsLinks />
     </View>
   );
 }

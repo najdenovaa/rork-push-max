@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Msk push",
+    "name": "MKS Push",
     "slug": "lnl2nmwo5fphaf5gc5xzg",
     "version": "1.0.0",
     "extra": {
@@ -19,11 +19,13 @@
       "backgroundColor": "#DCFCE7"
     },
     "ios": {
-      "buildNumber": "13",
+      "buildNumber": "15",
       "supportsTablet": false,
       "bundleIdentifier": "ru.mskpush.app",
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["max"]
+        "LSApplicationQueriesSchemes": [
+          "max"
+        ]
       }
     },
     "android": {

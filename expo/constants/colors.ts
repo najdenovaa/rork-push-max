@@ -54,7 +54,7 @@ const palette = {
   },
 } as const;
 
-export type ThemeColors = (typeof palette)["light"];
+export type ThemeColors = typeof palette.light | typeof palette.dark;
 
 export function useTheme(): ThemeColors {
   const scheme = useColorScheme();
