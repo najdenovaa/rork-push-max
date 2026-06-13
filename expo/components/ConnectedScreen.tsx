@@ -165,7 +165,7 @@ export default function ConnectedScreen() {
             ]}
           >
             <Text style={[styles.openButtonText, { color: c.onAccent }]}>
-              Открыть Национальный
+              Открыть приложение
             </Text>
           </Pressable>
 
