@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackButton from "@/components/BackButton";
-import { SERVER_URL, useTheme } from "@/constants/colors";
+import { MAX_CONTENT_WIDTH, SERVER_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 5000;
@@ -83,11 +83,109 @@ export default function QRScreen() {
   // ── 2FA Mode ──
   if (pairing === "needs_2fa") {
     return (
+      <View style={[styles.outermost, { backgroundColor: c.background }]}>
+        <View
+          style={[
+            styles.constrained,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom + 24,
+            },
+          ]}
+        >
+          <BackButton onPress={() => void disconnect()} />
+
+          <View style={styles.body}>
+            <Text style={[styles.title, { color: c.text }]}>
+              Подтвердите вход
+            </Text>
+
+            <View style={{ height: 16 }} />
+
+            <Text style={[styles.twofaDescription, { color: c.textSecondary }]}>
+              QR отсканирован. Введите пароль двухфакторной аутентификации вашего
+              аккаунта.
+            </Text>
+
+            {pairingHint != null && (
+              <>
+                <View style={{ height: 12 }} />
+                <Text style={[styles.hint, { color: c.blue }]}>
+                  Подсказка: {pairingHint}
+                </Text>
+              </>
+            )}
+
+            <View style={{ height: 28 }} />
+
+            <TextInput
+              style={[
+                styles.passwordInput,
+                {
+                  backgroundColor: c.surface,
+                  color: c.text,
+                  borderColor: c.border,
+                },
+              ]}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Пароль"
+              placeholderTextColor={c.textFaint}
+              value={password}
+              onChangeText={(t) => {
+                setPassword(t);
+                setTwofaError(null);
+              }}
+              editable={!submitting}
+              returnKeyType="done"
+              onSubmitEditing={() => void handleSubmit2fa()}
+            />
+
+            <View style={{ height: 20 }} />
+
+            {twofaError != null && (
+              <>
+                <Text style={[styles.errorText, { color: c.red }]}>
+                  {twofaError}
+                </Text>
+                <View style={{ height: 16 }} />
+              </>
+            )}
+
+            <Pressable
+              onPress={() => void handleSubmit2fa()}
+              disabled={submitting || !password.trim()}
+              style={({ pressed }) => [
+                styles.submitButton,
+                {
+                  backgroundColor:
+                    submitting || !password.trim() ? c.border : c.blue,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              {submitting ? (
+                <ActivityIndicator color={c.onAccent} />
+              ) : (
+                <Text style={[styles.submitButtonText, { color: c.onAccent }]}>
+                  Подтвердить
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ── QR Mode ──
+  return (
+    <View style={[styles.outermost, { backgroundColor: c.background }]}>
       <View
         style={[
-          styles.container,
+          styles.constrained,
           {
-            backgroundColor: c.background,
             paddingTop: insets.top,
             paddingBottom: insets.bottom + 24,
           },
@@ -97,164 +195,74 @@ export default function QRScreen() {
 
         <View style={styles.body}>
           <Text style={[styles.title, { color: c.text }]}>
-            Подтвердите вход
+            Подключите Национальный
           </Text>
 
-          <View style={{ height: 16 }} />
+          <View style={{ height: 24 }} />
 
-          <Text style={[styles.twofaDescription, { color: c.textSecondary }]}>
-            QR отсканирован. Введите пароль двухфакторной аутентификации вашего
-            аккаунта.
-          </Text>
-
-          {pairingHint != null && (
-            <>
-              <View style={{ height: 12 }} />
-              <Text style={[styles.hint, { color: c.blue }]}>
-                Подсказка: {pairingHint}
+          {/* 3 steps */}
+          <View style={styles.steps}>
+            {[
+              "1. Откройте Национальный",
+              "2. Профиль → Устройства → Сканировать QR",
+              "3. Наведите камеру на QR-код ниже",
+            ].map((step, i) => (
+              <Text key={i} style={[styles.step, { color: c.text }]}>
+                {step}
               </Text>
-            </>
-          )}
+            ))}
+          </View>
 
-          <View style={{ height: 28 }} />
+          <View style={{ height: 24 }} />
 
-          <TextInput
-            style={[
-              styles.passwordInput,
-              {
-                backgroundColor: c.surface,
-                color: c.text,
-                borderColor: c.border,
-              },
-            ]}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="Пароль"
-            placeholderTextColor={c.textFaint}
-            value={password}
-            onChangeText={(t) => {
-              setPassword(t);
-              setTwofaError(null);
-            }}
-            editable={!submitting}
-            returnKeyType="done"
-            onSubmitEditing={() => void handleSubmit2fa()}
-          />
-
-          <View style={{ height: 20 }} />
-
-          {twofaError != null && (
-            <>
-              <Text style={[styles.errorText, { color: c.red }]}>
-                {twofaError}
-              </Text>
-              <View style={{ height: 16 }} />
-            </>
-          )}
-
-          <Pressable
-            onPress={() => void handleSubmit2fa()}
-            disabled={submitting || !password.trim()}
-            style={({ pressed }) => [
-              styles.submitButton,
-              {
-                backgroundColor: submitting || !password.trim() ? c.border : c.blue,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-          >
-            {submitting ? (
-              <ActivityIndicator color={c.onAccent} />
-            ) : (
-              <Text style={[styles.submitButtonText, { color: c.onAccent }]}>
-                Подтвердить
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  // ── QR Mode ──
-  return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: c.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom + 24,
-        },
-      ]}
-    >
-      <BackButton onPress={() => void disconnect()} />
-
-      <View style={styles.body}>
-        <Text style={[styles.title, { color: c.text }]}>
-          Подключите Национальный
-        </Text>
-
-        <View style={{ height: 24 }} />
-
-        {/* 3 steps */}
-        <View style={styles.steps}>
-          {[
-            "1. Откройте Национальный",
-            "2. Профиль → Устройства → Сканировать QR",
-            "3. Наведите камеру на QR-код ниже",
-          ].map((step, i) => (
-            <Text key={i} style={[styles.step, { color: c.text }]}>
-              {step}
-            </Text>
-          ))}
-        </View>
-
-        <View style={{ height: 24 }} />
-
-        {/* QR code from server */}
-        <View style={styles.qrWrapper}>
-          <Image
-            source={{ uri: qrUrl }}
-            style={styles.qrImage}
-            contentFit="contain"
-            cachePolicy="none"
-          />
-        </View>
-
-        <View style={{ height: 12 }} />
-
-        <Text style={[styles.qrHint, { color: c.textFaint }]}>
-          QR обновляется каждые 20 секунд
-        </Text>
-
-        <View style={styles.spinnerRow}>
-          {[0, 1, 2].map((i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor:
-                    i === dotIndex ? c.blue : c.border,
-                },
-              ]}
+          {/* QR code from server */}
+          <View style={styles.qrWrapper}>
+            <Image
+              source={{ uri: qrUrl }}
+              style={styles.qrImage}
+              contentFit="contain"
+              cachePolicy="none"
             />
-          ))}
+          </View>
+
+          <View style={{ height: 12 }} />
+
+          <Text style={[styles.qrHint, { color: c.textFaint }]}>
+            QR обновляется каждые 20 секунд
+          </Text>
+
+          <View style={styles.spinnerRow}>
+            {[0, 1, 2].map((i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor:
+                      i === dotIndex ? c.blue : c.border,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+
+          <Text style={[styles.waitingText, { color: c.textSecondary }]}>
+            Ожидание подключения...
+          </Text>
         </View>
-
-        <Text style={[styles.waitingText, { color: c.textSecondary }]}>
-          Ожидание подключения...
-        </Text>
       </View>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  outermost: {
+    flex: 1,
+    alignItems: "center",
+  },
+  constrained: {
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
     flex: 1,
     paddingHorizontal: 24,
   },

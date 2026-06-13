@@ -9,15 +9,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PRIVACY_URL, TERMS_URL, useTheme } from "@/constants/colors";
-import {
-  getPushToken,
-  requestNotificationPermission,
-} from "@/lib/notifications";
+import { MAX_CONTENT_WIDTH, PRIVACY_URL, TERMS_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
 import SiblingAppsLinks from "@/components/SiblingAppsLinks";
 
-type Phase = "idle" | "loading" | "error" | "permission_denied";
+type Phase = "idle" | "loading" | "error";
 
 export default function WelcomeScreen() {
   const c = useTheme();
@@ -26,22 +22,12 @@ export default function WelcomeScreen() {
 
   const [phase, setPhase] = useState<Phase>("idle");
 
+  /** Connect to the server with a placeholder push token.
+   *  Notification permission is requested later on the ConnectedScreen. */
   const handleStart = async (): Promise<void> => {
     setPhase("loading");
 
-    const permission = await requestNotificationPermission();
-    if (permission === "denied") {
-      setPhase("permission_denied");
-      return;
-    }
-
-    // In standalone (TestFlight) builds the push token can be unavailable on
-    // first launch. Don't block the user with a server error — register with a
-    // placeholder and let QRScreen retry the real token in the background.
-    const token =
-      (await getPushToken()) ?? "pending-expo";
-
-    const result = await connect(token);
+    const result = await connect("pending-expo");
     if (!result.success) {
       setPhase("error");
     }
@@ -49,47 +35,66 @@ export default function WelcomeScreen() {
 
   if (phase === "loading") {
     return (
-      <View style={[styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator size="large" color={c.blue} />
-        <Text style={[styles.loadingText, { color: c.textSecondary }]}>
-          Подключаем...
-        </Text>
+      <View style={[styles.outermost, { backgroundColor: c.background }]}>
+        <View style={[styles.constrained, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
+          <ActivityIndicator size="large" color={c.blue} />
+          <Text style={[styles.loadingText, { color: c.textSecondary }]}>
+            Подключаем...
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: c.background,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom + 24,
-        },
-      ]}
-    >
-      <View style={styles.body}>
-        <Text style={[styles.title, { color: c.text }]}>MKS Push</Text>
+    <View style={[styles.outermost, { backgroundColor: c.background }]}>
+      <View
+        style={[
+          styles.constrained,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom + 24,
+          },
+        ]}
+      >
+        <View style={styles.body}>
+          <Text style={[styles.title, { color: c.text }]}>MKS Push</Text>
 
-        <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-          Умные уведомления
-        </Text>
+          <Text style={[styles.subtitle, { color: c.textSecondary }]}>
+            Умные уведомления
+          </Text>
 
-        <View style={{ height: 20 }} />
+          <View style={{ height: 20 }} />
 
-        <Text style={[styles.description, { color: c.textSecondary }]}>
-          Ваши данные в безопасности. Мы не читаем ваши сообщения.
-        </Text>
+          <Text style={[styles.description, { color: c.textSecondary }]}>
+            Ваши данные в безопасности. Мы не читаем ваши сообщения.
+          </Text>
 
-        <View style={{ height: 40 }} />
+          <View style={{ height: 40 }} />
 
-        {phase === "error" && (
-          <>
-            <Text style={[styles.errorText, { color: c.red }]}>
-              Сервер временно недоступен. Проверьте интернет и попробуйте снова.
-            </Text>
-            <View style={{ height: 20 }} />
+          {phase === "error" && (
+            <>
+              <Text style={[styles.errorText, { color: c.red }]}>
+                Сервер временно недоступен. Проверьте интернет и попробуйте снова.
+              </Text>
+              <View style={{ height: 20 }} />
+              <Pressable
+                onPress={() => {
+                  void handleStart();
+                }}
+                style={({ pressed }) => [
+                  styles.button,
+                  { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <Text style={[styles.buttonText, { color: c.onAccent }]}>
+                  Повторить
+                </Text>
+              </Pressable>
+            </>
+          )}
+
+          {phase === "idle" && (
             <Pressable
               onPress={() => {
                 void handleStart();
@@ -100,71 +105,40 @@ export default function WelcomeScreen() {
               ]}
             >
               <Text style={[styles.buttonText, { color: c.onAccent }]}>
-                Повторить
+                Начать
               </Text>
             </Pressable>
-          </>
-        )}
+          )}
+        </View>
 
-        {phase === "permission_denied" && (
-          <>
-            <Text style={[styles.errorText, { color: c.red }]}>
-              Для работы нужны уведомления. Включите их в настройках.
-            </Text>
-            <View style={{ height: 20 }} />
-            <Pressable
-              onPress={() => Linking.openSettings()}
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
-              ]}
+        {/* Footer — always visible on the start screen */}
+        <View style={styles.footerSection}>
+          <SiblingAppsLinks />
+
+          <View style={{ height: 8 }} />
+
+          <Text style={[styles.footer, { color: c.textFaint }]}>
+            Приложение не читает ваши сообщения. Только доставка уведомлений.
+          </Text>
+          <View style={styles.legalLinks}>
+            <Text
+              style={styles.legalLink}
+              onPress={() => {
+                void Linking.openURL(PRIVACY_URL);
+              }}
             >
-              <Text style={[styles.buttonText, { color: c.onAccent }]}>
-                Открыть настройки
-              </Text>
-            </Pressable>
-          </>
-        )}
-
-        {phase === "idle" && (
-          <Pressable
-            onPress={() => {
-              void handleStart();
-            }}
-            style={({ pressed }) => [
-              styles.button,
-              { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Text style={[styles.buttonText, { color: c.onAccent }]}>
-              Начать
+              Privacy Policy
             </Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* Footer — always visible on the start screen */}
-      <View style={styles.footerSection}>
-        <SiblingAppsLinks />
-
-        <View style={{ height: 8 }} />
-
-        <Text style={[styles.footer, { color: c.textFaint }]}>
-          Приложение не читает ваши сообщения. Только доставка уведомлений.
-        </Text>
-        <View style={styles.legalLinks}>
-          <Text
-            style={[styles.legalLink, { color: c.textFaint }]}
-            onPress={() => { void Linking.openURL(PRIVACY_URL); }}
-          >
-            Политика конфиденциальности
-          </Text>
-          <Text
-            style={[styles.legalLink, { color: c.textFaint }]}
-            onPress={() => { void Linking.openURL(TERMS_URL); }}
-          >
-            Пользовательское соглашение
-          </Text>
+            <Text style={styles.legalSep}>|</Text>
+            <Text
+              style={styles.legalLink}
+              onPress={() => {
+                void Linking.openURL(TERMS_URL);
+              }}
+            >
+              Terms of Service
+            </Text>
+          </View>
         </View>
       </View>
     </View>
@@ -172,23 +146,24 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  outermost: {
+    flex: 1,
+    alignItems: "center",
+  },
+  constrained: {
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: "space-between",
   },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-  },
-  loadingText: {
-    fontSize: 20,
-  },
   body: {
     flex: 1,
     justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: 20,
+    marginTop: 20,
   },
   title: {
     fontSize: 32,
@@ -232,11 +207,17 @@ const styles = StyleSheet.create({
   legalLinks: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 20,
+    alignItems: "center",
+    gap: 8,
     flexWrap: "wrap",
   },
   legalLink: {
-    fontSize: 15,
+    fontSize: 14,
+    color: "#888",
     textDecorationLine: "underline",
+  },
+  legalSep: {
+    fontSize: 14,
+    color: "#888",
   },
 });

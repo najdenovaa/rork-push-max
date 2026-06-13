@@ -16,6 +16,9 @@ export const LINKED_APP_SCHEME = "max";
 /** Expo project ID for push notifications in standalone builds. */
 export const EXPO_PROJECT_ID = "b83ad525-873b-4d42-b1c1-995dc844da51";
 
+/** Maximum content width for iPad safety — prevents layout breakage on wide screens. */
+export const MAX_CONTENT_WIDTH = 500;
+
 /** Brand palette — green primary, amber accent. */
 export const Brand = {
   primary: "#16A34A",

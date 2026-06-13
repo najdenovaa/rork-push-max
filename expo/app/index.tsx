@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import ConnectedScreen from "@/components/ConnectedScreen";
 import QRScreen from "@/components/QRScreen";
 import WelcomeScreen from "@/components/WelcomeScreen";
-import { useTheme } from "@/constants/colors";
+import { MAX_CONTENT_WIDTH, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
 
 export default function Index() {
@@ -12,8 +12,10 @@ export default function Index() {
 
   if (!isLoaded) {
     return (
-      <View style={[styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator size="large" color={c.blue} />
+      <View style={[styles.outermost, { backgroundColor: c.background }]}>
+        <View style={styles.constrained}>
+          <ActivityIndicator size="large" color={c.blue} />
+        </View>
       </View>
     );
   }
@@ -33,7 +35,13 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
-  center: {
+  outermost: {
+    flex: 1,
+    alignItems: "center",
+  },
+  constrained: {
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
