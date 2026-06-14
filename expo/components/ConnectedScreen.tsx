@@ -124,7 +124,7 @@ export default function ConnectedScreen() {
         {notifState === "denied" && (
           <View style={[styles.notifBanner, { backgroundColor: c.surface, borderColor: c.border }]}>
             <Text style={[styles.notifSubText, { color: c.textFaint }]}>
-              Уведомления отключены. Включить можно в Настройках iPhone.
+              Уведомления отключены. Включить можно в Настройках устройства.
             </Text>
             <Pressable
               onPress={() => {
