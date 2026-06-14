@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { MAX_CONTENT_WIDTH, PRIVACY_URL, TERMS_URL, useTheme } from "@/constants/colors";
+import { MAX_CONTENT_WIDTH, PRIVACY_URL, SUPPORT_URL, TERMS_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
 import SiblingAppsLinks from "@/components/SiblingAppsLinks";
 
@@ -137,6 +137,15 @@ export default function WelcomeScreen() {
               }}
             >
               Terms of Service
+            </Text>
+            <Text style={styles.legalSep}>|</Text>
+            <Text
+              style={styles.legalLink}
+              onPress={() => {
+                void Linking.openURL(SUPPORT_URL);
+              }}
+            >
+              Support
             </Text>
           </View>
         </View>

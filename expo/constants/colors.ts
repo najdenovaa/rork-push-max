@@ -6,6 +6,7 @@ export const SERVER_URL = "https://mkspush.ru";
 /** Legal URLs. */
 export const PRIVACY_URL = "https://mkspush.ru/privacy";
 export const TERMS_URL = "https://mkspush.ru/terms";
+export const SUPPORT_URL = "https://mkspush.ru/support";
 
 /** URL linked web app — opened when user taps a push notification. */
 export const LINKED_APP_URL = "https://max.ru/";

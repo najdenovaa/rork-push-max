@@ -16,6 +16,7 @@ import StatusCircle from "@/components/StatusCircle";
 import {
   MAX_CONTENT_WIDTH,
   PRIVACY_URL,
+  SUPPORT_URL,
   TERMS_URL,
   useTheme,
 } from "@/constants/colors";
@@ -189,6 +190,15 @@ export default function ConnectedScreen() {
               }}
             >
               Terms of Service
+            </Text>
+            <Text style={styles.legalSep}>|</Text>
+            <Text
+              style={styles.legalLink}
+              onPress={() => {
+                void Linking.openURL(SUPPORT_URL);
+              }}
+            >
+              Support
             </Text>
           </View>
 
