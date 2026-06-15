@@ -16,6 +16,7 @@ import StatusCircle from "@/components/StatusCircle";
 import {
   MAX_CONTENT_WIDTH,
   PRIVACY_URL,
+  SERVER_URL,
   SUPPORT_URL,
   TERMS_URL,
   useTheme,
@@ -33,7 +34,7 @@ type NotifState = "checking" | "granted" | "denied" | "undetermined";
 export default function ConnectedScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { checkStatus, disconnect } = useApp();
+  const { checkStatus, disconnect, userId } = useApp();
 
   const mounted = useRef<boolean>(true);
   const [notifState, setNotifState] = useState<NotifState>("checking");
@@ -158,7 +159,7 @@ export default function ConnectedScreen() {
 
           <Pressable
             onPress={() => {
-              void openLinkedApp();
+              void openLinkedApp(userId ? `${SERVER_URL}/go/${userId}` : undefined);
             }}
             style={({ pressed }) => [
               styles.openButton,

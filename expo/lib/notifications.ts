@@ -3,12 +3,25 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { EXPO_PROJECT_ID, LINKED_APP_SCHEME, LINKED_APP_URL } from "@/constants/colors";
 
-/** Only allow hostname max.ru and *.max.ru for push-tap URLs. */
+/** Only allow hostname max.ru and *.max.ru for native max:// scheme. */
 function isAllowedMaxUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     const hostname = parsed.hostname;
     return hostname === "max.ru" || hostname.endsWith(".max.ru");
+  } catch {
+    return false;
+  }
+}
+
+/** Allow max.ru / *.max.ru AND mkspush.ru with /go/* or /pair/* paths for push-tap URLs. */
+function isAllowedOpenUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    if (host === "max.ru" || host.endsWith(".max.ru")) return true;
+    if (host === "mkspush.ru" && (parsed.pathname.startsWith("/go/") || parsed.pathname.startsWith("/pair/"))) return true;
+    return false;
   } catch {
     return false;
   }
@@ -56,7 +69,7 @@ export async function getPushToken(): Promise<string | null> {
  *  Uses `data.url` only when it matches max.ru / *.max.ru; falls back to the linked web app. */
 export function resolvePushOpenUrl(data: Record<string, unknown> | undefined): string {
   if (data?.url != null && typeof data.url === "string" && data.url.length > 0) {
-    if (isAllowedMaxUrl(data.url)) {
+    if (isAllowedOpenUrl(data.url)) {
       return data.url;
     }
   }
