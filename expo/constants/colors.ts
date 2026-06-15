@@ -9,7 +9,7 @@ export const TERMS_URL = "https://mkspush.ru/terms";
 export const SUPPORT_URL = "https://mkspush.ru/support";
 
 /** URL linked web app — opened when user taps a push notification. */
-export const LINKED_APP_URL = "https://max.ru/";
+export const LINKED_APP_URL = "https://mkspush.ru/go";
 
 /** Custom URL scheme for the linked app — used to open the native app instead of Safari. */
 export const LINKED_APP_SCHEME = "max";
