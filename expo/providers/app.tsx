@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SERVER_URL } from "@/constants/colors";
 
@@ -34,28 +34,80 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [pairing, setPairing] = useState<PairingPhase>("unknown");
   const [pairingHint, setPairingHint] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const initialCheckDone = useRef<boolean>(false);
 
-  // Load persisted user_id on mount.
+  // Load persisted user_id on mount — don't mark loaded yet.
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(USER_ID_KEY)
       .then((id) => {
         if (active) {
           setUserId(id);
+          // If no stored id, app is ready immediately.
+          if (!id) {
+            setIsLoaded(true);
+          }
         }
       })
       .catch((err) => {
         console.log("[app] failed to load user_id", err);
-      })
-      .finally(() => {
-        if (active) {
-          setIsLoaded(true);
-        }
+        if (active) setIsLoaded(true);
       });
     return () => {
       active = false;
     };
   }, []);
+
+  /** Check pairing status from the server. */
+  const checkStatus = useCallback(async (): Promise<AppStatus> => {
+    if (!userId) {
+      return "unknown";
+    }
+    try {
+      const res = await fetchWithTimeout(
+        `${SERVER_URL}/api/status/${userId}`,
+        { method: "GET" }
+      );
+      if (!res.ok) {
+        return "pending";
+      }
+      const data = (await res.json()) as {
+        status: string;
+        pairing?: string;
+        hint?: string | null;
+      };
+
+      if (data.pairing === "needs_2fa") {
+        setPairing("needs_2fa");
+        setPairingHint(data.hint ?? null);
+      } else if (data.pairing === "active" || data.status === "active") {
+        setPairing("active");
+        setPairingHint(null);
+      } else {
+        setPairing("qr");
+        setPairingHint(null);
+      }
+
+      const newStatus: AppStatus =
+        data.status === "active" ? "active" : "pending";
+      setStatus(newStatus);
+      return newStatus;
+    } catch (err) {
+      console.log("[app] status check failed", err);
+      return "pending";
+    }
+  }, [userId]);
+
+  // When a stored userId is loaded, check its real status before showing a screen.
+  useEffect(() => {
+    if (initialCheckDone.current) return;
+    if (userId && !isLoaded) {
+      initialCheckDone.current = true;
+      checkStatus().finally(() => {
+        setIsLoaded(true);
+      });
+    }
+  }, [userId, isLoaded, checkStatus]);
 
   /** Connect to the server — get a user_id and start pairing. */
   const connect = useCallback(async (token: string): Promise<ConnectResult> => {
@@ -103,46 +155,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     },
     []
   );
-
-  /** Check pairing status from the server. */
-  const checkStatus = useCallback(async (): Promise<AppStatus> => {
-    if (!userId) {
-      return "unknown";
-    }
-    try {
-      const res = await fetchWithTimeout(
-        `${SERVER_URL}/api/status/${userId}`,
-        { method: "GET" }
-      );
-      if (!res.ok) {
-        return "pending";
-      }
-      const data = (await res.json()) as {
-        status: string;
-        pairing?: string;
-        hint?: string | null;
-      };
-
-      if (data.pairing === "needs_2fa") {
-        setPairing("needs_2fa");
-        setPairingHint(data.hint ?? null);
-      } else if (data.pairing === "active" || data.status === "active") {
-        setPairing("active");
-        setPairingHint(null);
-      } else {
-        setPairing("qr");
-        setPairingHint(null);
-      }
-
-      const newStatus: AppStatus =
-        data.status === "active" ? "active" : "pending";
-      setStatus(newStatus);
-      return newStatus;
-    } catch (err) {
-      console.log("[app] status check failed", err);
-      return "pending";
-    }
-  }, [userId]);
 
   /** Submit 2FA password after QR scan when pairing === needs_2fa. */
   const submit2fa = useCallback(async (password: string): Promise<boolean> => {

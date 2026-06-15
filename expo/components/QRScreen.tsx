@@ -26,10 +26,15 @@ export default function QRScreen() {
   const [qrVersion, setQrVersion] = useState<number>(0);
   const [dotIndex, setDotIndex] = useState<number>(0);
 
+  // QR validation states: loading → fetch ok → ready; loading + 15s → error
+  const [qrPhase, setQrPhase] = useState<"loading" | "ready" | "error">("loading");
+
   // 2FA state
   const [password, setPassword] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [twofaError, setTwofaError] = useState<string | null>(null);
+
+  const qrUrl = `${SERVER_URL}/api/max-qr/${userId ?? ""}?v=${qrVersion}`;
 
   // Poll status every 5 seconds.
   useEffect(() => {
@@ -45,6 +50,39 @@ export default function QRScreen() {
       active = false;
     };
   }, [checkStatus]);
+
+  // Validate QR URL before showing — retry for up to 15 seconds.
+  useEffect(() => {
+    if (pairing === "needs_2fa") return;
+
+    setQrPhase("loading");
+    let cancelled = false;
+
+    const validateQR = async (): Promise<void> => {
+      const startTime = Date.now();
+      while (!cancelled && Date.now() - startTime < 15000) {
+        try {
+          const res = await fetch(qrUrl);
+          if (res.ok) {
+            if (!cancelled) setQrPhase("ready");
+            return;
+          }
+        } catch {
+          // will retry
+        }
+        await new Promise<void>((r) => {
+          setTimeout(r, 1000);
+        });
+      }
+      if (!cancelled) setQrPhase("error");
+    };
+
+    void validateQR();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [qrUrl, pairing]);
 
   // Refresh QR every 20 seconds — only when NOT in 2FA mode.
   useEffect(() => {
@@ -63,8 +101,6 @@ export default function QRScreen() {
     }, 800);
     return () => clearInterval(interval);
   }, [pairing]);
-
-  const qrUrl = `${SERVER_URL}/api/max-qr/${userId ?? ""}?v=${qrVersion}`;
 
   const handleSubmit2fa = async (): Promise<void> => {
     const trimmed = password.trim();
@@ -194,42 +230,125 @@ export default function QRScreen() {
         <BackButton onPress={() => void disconnect()} />
 
         <View style={styles.body}>
-          <Text style={[styles.title, { color: c.text }]}>
-            Подключите Национальный
-          </Text>
-
-          <View style={{ height: 24 }} />
-
-          {/* 3 steps */}
-          <View style={styles.steps}>
-            {[
-              "1. Откройте Национальный",
-              "2. Профиль → Устройства → Сканировать QR",
-              "3. Наведите камеру на QR-код ниже",
-            ].map((step, i) => (
-              <Text key={i} style={[styles.step, { color: c.text }]}>
-                {step}
+          {/* QR loading */}
+          {qrPhase === "loading" && (
+            <>
+              <Text style={[styles.title, { color: c.text }]}>
+                Подключите ваше приложение
               </Text>
-            ))}
-          </View>
+              <View style={{ height: 24 }} />
+              <View style={styles.steps}>
+                {[
+                  "1. Откройте ваше приложение",
+                  "2. Профиль → Устройства → Сканировать QR",
+                  "3. Наведите камеру на QR-код ниже",
+                ].map((step, i) => (
+                  <Text key={i} style={[styles.step, { color: c.text }]}>
+                    {step}
+                  </Text>
+                ))}
+              </View>
+              <View style={{ height: 32 }} />
+              <ActivityIndicator size="large" color={c.blue} />
+              <Text style={[styles.validatingText, { color: c.textSecondary }]}>
+                Генерируем QR-код…
+              </Text>
+            </>
+          )}
 
-          <View style={{ height: 24 }} />
+          {/* QR error */}
+          {qrPhase === "error" && (
+            <>
+              <Text style={[styles.title, { color: c.text }]}>
+                Подключите ваше приложение
+              </Text>
+              <View style={{ height: 24 }} />
+              <View style={styles.steps}>
+                {[
+                  "1. Откройте ваше приложение",
+                  "2. Профиль → Устройства → Сканировать QR",
+                  "3. Наведите камеру на QR-код ниже",
+                ].map((step, i) => (
+                  <Text key={i} style={[styles.step, { color: c.text }]}>
+                    {step}
+                  </Text>
+                ))}
+              </View>
+              <View style={{ height: 24 }} />
+              <Text style={[styles.errorText, { color: c.red }]}>
+                Не удалось получить QR-код. Нажмите, чтобы начать заново.
+              </Text>
+              <View style={{ height: 20 }} />
+              <Pressable
+                onPress={() => {
+                  void disconnect();
+                }}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: c.blue,
+                    height: 56,
+                    borderRadius: 16,
+                    alignItems: "center" as const,
+                    justifyContent: "center" as const,
+                    paddingHorizontal: 32,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: 20,
+                    fontWeight: "700" as const,
+                    color: c.onAccent,
+                  }}
+                >
+                  Начать заново
+                </Text>
+              </Pressable>
+            </>
+          )}
 
-          {/* QR code from server */}
-          <View style={styles.qrWrapper}>
-            <Image
-              source={{ uri: qrUrl }}
-              style={styles.qrImage}
-              contentFit="contain"
-              cachePolicy="none"
-            />
-          </View>
+          {/* QR ready */}
+          {qrPhase === "ready" && (
+            <>
+              <Text style={[styles.title, { color: c.text }]}>
+                Подключите ваше приложение
+              </Text>
 
-          <View style={{ height: 12 }} />
+              <View style={{ height: 24 }} />
 
-          <Text style={[styles.qrHint, { color: c.textFaint }]}>
-            QR обновляется каждые 20 секунд
-          </Text>
+              {/* 3 steps */}
+              <View style={styles.steps}>
+                {[
+                  "1. Откройте ваше приложение",
+                  "2. Профиль → Устройства → Сканировать QR",
+                  "3. Наведите камеру на QR-код ниже",
+                ].map((step, i) => (
+                  <Text key={i} style={[styles.step, { color: c.text }]}>
+                    {step}
+                  </Text>
+                ))}
+              </View>
+
+              <View style={{ height: 24 }} />
+
+              {/* QR code from server */}
+              <View style={styles.qrWrapper}>
+                <Image
+                  source={{ uri: qrUrl }}
+                  style={styles.qrImage}
+                  contentFit="contain"
+                  cachePolicy="none"
+                />
+              </View>
+
+              <View style={{ height: 12 }} />
+
+              <Text style={[styles.qrHint, { color: c.textFaint }]}>
+                QR обновляется каждые 20 секунд
+              </Text>
+            </>
+          )}
 
           <View style={styles.spinnerRow}>
             {[0, 1, 2].map((i) => (
@@ -309,6 +428,12 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
+  },
+  validatingText: {
+    fontSize: 18,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 16,
   },
   waitingText: {
     fontSize: 20,
