@@ -73,18 +73,21 @@ function toNativeMaxUrl(httpsUrl: string): string {
   }
 }
 
-/** Open the linked app via its native URL scheme, falling back to https. */
+/** Open the linked app via its native URL scheme for max.ru URLs, otherwise via https directly. */
 export async function openLinkedApp(httpsUrl?: string): Promise<void> {
   const url = httpsUrl ?? LINKED_APP_URL;
-  const nativeUrl = toNativeMaxUrl(url);
-  try {
-    await Linking.openURL(nativeUrl);
-  } catch {
+  if (isAllowedMaxUrl(url)) {
     try {
-      await Linking.openURL(url);
-    } catch (error) {
-      console.log("[notifications] failed to open both native and https", error);
+      await Linking.openURL(toNativeMaxUrl(url));
+      return;
+    } catch {
+      // fall through to https
     }
+  }
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
+    console.log("[notifications] failed to open url", error);
   }
 }
 
