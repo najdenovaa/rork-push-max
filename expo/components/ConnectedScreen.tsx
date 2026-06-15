@@ -16,7 +16,6 @@ import StatusCircle from "@/components/StatusCircle";
 import {
   MAX_CONTENT_WIDTH,
   PRIVACY_URL,
-  SERVER_URL,
   SUPPORT_URL,
   TERMS_URL,
   useTheme,
@@ -159,7 +158,7 @@ export default function ConnectedScreen() {
 
           <Pressable
             onPress={() => {
-              void openLinkedApp(userId ? `${SERVER_URL}/go/${userId}` : undefined);
+              void openLinkedApp(undefined, userId);
             }}
             style={({ pressed }) => [
               styles.openButton,

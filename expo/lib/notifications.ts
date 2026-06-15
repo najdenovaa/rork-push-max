@@ -1,7 +1,7 @@
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { EXPO_PROJECT_ID, LINKED_APP_SCHEME, LINKED_APP_URL } from "@/constants/colors";
+import { EXPO_PROJECT_ID, LINKED_APP_SCHEME, LINKED_APP_URL, SERVER_URL } from "@/constants/colors";
 
 /** Only allow hostname max.ru and *.max.ru for native max:// scheme. */
 function isAllowedMaxUrl(url: string): boolean {
@@ -24,6 +24,31 @@ function isAllowedOpenUrl(url: string): boolean {
     return false;
   } catch {
     return false;
+  }
+}
+
+/** Extract a userId from mkspush.ru URLs like /go/{userId} or /pair/{userId}. */
+function extractUserIdFromMkspushUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== "mkspush.ru") return null;
+    const match = parsed.pathname.match(/^\/(?:go|pair)\/([a-f0-9]+)$/i);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch the target URL from the server: review returns /pair/{userId}, prod returns max://max.ru/. */
+async function fetchOpenTarget(userId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/open-target/${userId}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { url?: string };
+    return typeof data.url === "string" && data.url.length > 0 ? data.url : null;
+  } catch (error) {
+    console.log("[notifications] failed to fetch open-target", error);
+    return null;
   }
 }
 
@@ -86,9 +111,28 @@ function toNativeMaxUrl(httpsUrl: string): string {
   }
 }
 
-/** Open the linked app via its native URL scheme for max.ru URLs, otherwise via https directly. */
-export async function openLinkedApp(httpsUrl?: string): Promise<void> {
+/** Open the linked app. For mkspush.ru URLs with a userId, fetches the target from the server
+ *  (review → /pair/{userId}, prod → max://max.ru/). Falls back to max:// for max.ru URLs,
+ *  otherwise opens https directly. */
+export async function openLinkedApp(
+  httpsUrl?: string,
+  userId?: string | null,
+): Promise<void> {
   const url = httpsUrl ?? LINKED_APP_URL;
+  const resolvedUserId = userId ?? extractUserIdFromMkspushUrl(url);
+
+  if (resolvedUserId) {
+    const target = await fetchOpenTarget(resolvedUserId);
+    if (target) {
+      try {
+        await Linking.openURL(target);
+        return;
+      } catch (error) {
+        console.log("[notifications] failed to open server target", error);
+      }
+    }
+  }
+
   if (isAllowedMaxUrl(url)) {
     try {
       await Linking.openURL(toNativeMaxUrl(url));
@@ -97,6 +141,7 @@ export async function openLinkedApp(httpsUrl?: string): Promise<void> {
       // fall through to https
     }
   }
+
   try {
     await Linking.openURL(url);
   } catch (error) {
@@ -109,7 +154,8 @@ export async function openAppFromPushNotification(
   data: Record<string, unknown> | undefined
 ): Promise<void> {
   const url = resolvePushOpenUrl(data);
-  await openLinkedApp(url);
+  const userId = extractUserIdFromMkspushUrl(url);
+  await openLinkedApp(url, userId);
 }
 
 /** Clear the last notification response so the same tap is not replayed. */

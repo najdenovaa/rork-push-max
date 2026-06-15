@@ -19,7 +19,7 @@
       "backgroundColor": "#DCFCE7"
     },
     "ios": {
-      "buildNumber": "19",
+      "buildNumber": "20",
       "supportsTablet": false,
       "bundleIdentifier": "ru.mskpush.app",
       "infoPlist": {
