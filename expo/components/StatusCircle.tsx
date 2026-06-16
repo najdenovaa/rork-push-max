@@ -9,7 +9,7 @@ type Props = {
   status: AppStatus;
 };
 
-const SIZE = 120;
+const SIZE = 80;
 
 /** Large circular status indicator with an animated pulse halo for "active". */
 export default function StatusCircle({ status }: Props) {
@@ -63,7 +63,7 @@ export default function StatusCircle({ status }: Props) {
       )}
       <View style={[styles.circle, { backgroundColor: color }]}>
         {status === "active" && (
-          <Check color="#FFFFFF" size={64} strokeWidth={4} />
+          <Check color="#FFFFFF" size={40} strokeWidth={3.5} />
         )}
       </View>
     </View>

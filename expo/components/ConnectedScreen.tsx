@@ -177,14 +177,15 @@ export default function ConnectedScreen() {
 
   return (
     <View style={[styles.outermost, { backgroundColor: c.background }]}>
-      <View
-        style={[
-          styles.constrained,
-          {
-            paddingTop: insets.top,
-            paddingBottom: insets.bottom + 24,
-          },
-        ]}
+      <ScrollView
+        style={styles.constrained}
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingBottom: insets.bottom + 32,
+          paddingHorizontal: 24,
+        }}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
       >
         <BackButton onPress={() => void disconnect()} />
 
@@ -235,11 +236,11 @@ export default function ConnectedScreen() {
           <StatusCircle status="active" />
 
           <Text style={[styles.statusText, { color: c.green }]}>
-            Доставка уведомлений с веб-приложений включена
+            Подключено
           </Text>
 
           <Text style={[styles.subText, { color: c.textSecondary }]}>
-            Push-уведомления с ваших веб-приложений приходят автоматически
+            Уведомления с веб-приложений приходят автоматически
           </Text>
 
           {/* ── Events feed ── */}
@@ -318,7 +319,7 @@ export default function ConnectedScreen() {
         </View>
 
         <SiblingAppsLinks />
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -332,7 +333,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: MAX_CONTENT_WIDTH,
     flex: 1,
-    paddingHorizontal: 24,
   },
   // Notification banner
   notifBanner: {
@@ -369,25 +369,24 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   body: {
-    flex: 1,
     alignItems: "center",
-    paddingTop: 20,
+    paddingTop: 24,
   },
   statusText: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: "700",
     textAlign: "center",
-    marginTop: 28,
+    marginTop: 18,
   },
   subText: {
-    fontSize: 18,
+    fontSize: 15,
     textAlign: "center",
-    marginTop: 12,
+    marginTop: 6,
   },
   // Events feed
   eventsSection: {
     width: "100%",
-    marginTop: 28,
+    marginTop: 22,
   },
   eventsHeader: {
     flexDirection: "row",
@@ -444,7 +443,7 @@ const styles = StyleSheet.create({
   },
   // Buttons
   buttonArea: {
-    marginTop: 28,
+    marginTop: 22,
     alignItems: "center",
     width: "100%",
   },
