@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackButton from "@/components/BackButton";
 import StatusCircle from "@/components/StatusCircle";
 import {
   MAX_CONTENT_WIDTH,
@@ -186,8 +185,6 @@ export default function ConnectedScreen() {
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
-        <BackButton onPress={() => void disconnect()} />
-
         {/* Notification permission banner */}
         {notifState === "undetermined" && (
           <View style={[styles.notifBanner, { backgroundColor: c.surface, borderColor: c.border }]}>
