@@ -33,6 +33,7 @@ const palette = {
   light: {
     background: "#DCFCE7",
     surface: "#FFFFFF",
+    eventCard: "#F5F5F7",
     text: "#0A1F12",
     textSecondary: "#5A7D65",
     textFaint: "#8FAA97",
@@ -46,6 +47,7 @@ const palette = {
   dark: {
     background: "#071A10",
     surface: "#0F2A1A",
+    eventCard: "#1C1C1E",
     text: "#F3FFF5",
     textSecondary: "#B7D9C1",
     textFaint: "#4D7A5E",

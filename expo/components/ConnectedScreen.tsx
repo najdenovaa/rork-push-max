@@ -1,9 +1,10 @@
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -16,6 +17,7 @@ import StatusCircle from "@/components/StatusCircle";
 import {
   MAX_CONTENT_WIDTH,
   PRIVACY_URL,
+  SERVER_URL,
   SUPPORT_URL,
   TERMS_URL,
   useTheme,
@@ -27,8 +29,20 @@ import {
 import { useApp } from "@/providers/app";
 
 const POLL_INTERVAL_MS = 60000;
+const EVENTS_POLL_MS = 10000;
 
 type NotifState = "checking" | "granted" | "denied" | "undetermined";
+
+type EventItem = {
+  title: string;
+  body: string;
+  time: string;
+};
+
+function formatTime(utcString: string): string {
+  const date = new Date(utcString + "Z");
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 export default function ConnectedScreen() {
   const c = useTheme();
@@ -37,6 +51,7 @@ export default function ConnectedScreen() {
 
   const mounted = useRef<boolean>(true);
   const [notifState, setNotifState] = useState<NotifState>("checking");
+  const [events, setEvents] = useState<EventItem[]>([]);
 
   useEffect(() => {
     mounted.current = true;
@@ -63,6 +78,30 @@ export default function ConnectedScreen() {
     });
   }, []);
 
+  // Fetch events every 10 seconds.
+  const fetchEvents = useCallback(async (): Promise<void> => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${SERVER_URL}/api/events/${userId}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { ok: boolean; events: EventItem[] };
+      if (data.ok && Array.isArray(data.events)) {
+        setEvents(data.events);
+      }
+    } catch (err) {
+      console.log("[events] fetch failed", err);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    void fetchEvents();
+    const interval = setInterval(() => {
+      void fetchEvents();
+    }, EVENTS_POLL_MS);
+    return () => clearInterval(interval);
+  }, [userId, fetchEvents]);
+
   const handleEnableNotifications = async (): Promise<void> => {
     const result = await requestNotificationPermission();
     if (!mounted.current) return;
@@ -84,6 +123,55 @@ export default function ConnectedScreen() {
         },
       ],
       { cancelable: true }
+    );
+  };
+
+  const renderEventCards = (): React.ReactNode => {
+    if (events.length === 0) {
+      return (
+        <View style={styles.eventsEmpty}>
+          <Text style={[styles.eventsEmptyText, { color: c.textFaint }]}>
+            Событий пока нет. Они появятся при получении данных.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView
+        style={styles.eventsList}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+      >
+        {events.map((event, index) => (
+          <View
+            key={`${event.time}-${index}`}
+            style={[
+              styles.eventCard,
+              { backgroundColor: c.eventCard },
+              index < events.length - 1 && styles.eventCardGap,
+            ]}
+          >
+            <View style={styles.eventCardContent}>
+              <Text
+                style={[styles.eventTitle, { color: c.text }]}
+                numberOfLines={1}
+              >
+                {event.title}
+              </Text>
+              <Text
+                style={[styles.eventBody, { color: c.textSecondary }]}
+                numberOfLines={2}
+              >
+                {event.body}
+              </Text>
+            </View>
+            <Text style={[styles.eventTime, { color: c.textFaint }]}>
+              {formatTime(event.time)}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
     );
   };
 
@@ -154,64 +242,79 @@ export default function ConnectedScreen() {
             Push-уведомления с ваших веб-приложений приходят автоматически
           </Text>
 
-          <View style={{ height: 40 }} />
+          {/* ── Events feed ── */}
+          <View style={styles.eventsSection}>
+            <View style={styles.eventsHeader}>
+              <Text style={[styles.eventsHeaderTitle, { color: c.text }]}>
+                Последние события
+              </Text>
+              <Text style={[styles.eventsHeaderCount, { color: c.textSecondary }]}>
+                {events.length}
+              </Text>
+            </View>
 
-          <Pressable
-            onPress={() => {
-              void openLinkedApp(undefined, userId);
-            }}
-            style={({ pressed }) => [
-              styles.openButton,
-              { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Text style={[styles.openButtonText, { color: c.onAccent }]}>
-              Открыть приложение
-            </Text>
-          </Pressable>
-
-          <View style={{ height: 20 }} />
-
-          {/* Legal links */}
-          <View style={styles.legalLinks}>
-            <Text
-              style={styles.legalLink}
-              onPress={() => {
-                void Linking.openURL(PRIVACY_URL);
-              }}
-            >
-              Privacy Policy
-            </Text>
-            <Text style={styles.legalSep}>|</Text>
-            <Text
-              style={styles.legalLink}
-              onPress={() => {
-                void Linking.openURL(TERMS_URL);
-              }}
-            >
-              Terms of Service
-            </Text>
-            <Text style={styles.legalSep}>|</Text>
-            <Text
-              style={styles.legalLink}
-              onPress={() => {
-                void Linking.openURL(SUPPORT_URL);
-              }}
-            >
-              Support
-            </Text>
+            {renderEventCards()}
           </View>
 
-          <View style={{ height: 20 }} />
+          {/* ── Buttons ── */}
+          <View style={styles.buttonArea}>
+            <Pressable
+              onPress={() => {
+                void openLinkedApp(undefined, userId);
+              }}
+              style={({ pressed }) => [
+                styles.openButton,
+                { backgroundColor: c.blue, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Text style={[styles.openButtonText, { color: c.onAccent }]}>
+                Открыть приложение
+              </Text>
+            </Pressable>
 
-          <Pressable
-            onPress={confirmDisconnect}
-            style={styles.disconnectButton}
-          >
-            <Text style={[styles.disconnectText, { color: c.textSecondary }]}>
-              Отключить
-            </Text>
-          </Pressable>
+            <View style={{ height: 20 }} />
+
+            {/* Legal links */}
+            <View style={styles.legalLinks}>
+              <Text
+                style={styles.legalLink}
+                onPress={() => {
+                  void Linking.openURL(PRIVACY_URL);
+                }}
+              >
+                Privacy Policy
+              </Text>
+              <Text style={styles.legalSep}>|</Text>
+              <Text
+                style={styles.legalLink}
+                onPress={() => {
+                  void Linking.openURL(TERMS_URL);
+                }}
+              >
+                Terms of Service
+              </Text>
+              <Text style={styles.legalSep}>|</Text>
+              <Text
+                style={styles.legalLink}
+                onPress={() => {
+                  void Linking.openURL(SUPPORT_URL);
+                }}
+              >
+                Support
+              </Text>
+            </View>
+
+            <View style={{ height: 20 }} />
+
+            <Pressable
+              onPress={confirmDisconnect}
+              style={styles.disconnectButton}
+            >
+              <Text style={[styles.disconnectText, { color: c.textSecondary }]}>
+                Отключить
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         <SiblingAppsLinks />
@@ -267,8 +370,8 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
+    paddingTop: 20,
   },
   statusText: {
     fontSize: 26,
@@ -280,6 +383,70 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     marginTop: 12,
+  },
+  // Events feed
+  eventsSection: {
+    width: "100%",
+    marginTop: 28,
+  },
+  eventsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 12,
+  },
+  eventsHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  eventsHeaderCount: {
+    fontSize: 14,
+  },
+  eventsList: {
+    maxHeight: 300,
+  },
+  eventsEmpty: {
+    height: 120,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  eventsEmptyText: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  eventCard: {
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  eventCardGap: {
+    marginBottom: 1,
+  },
+  eventCardContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  eventBody: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  eventTime: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  // Buttons
+  buttonArea: {
+    marginTop: 28,
+    alignItems: "center",
+    width: "100%",
   },
   openButton: {
     height: 56,
