@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackButton from "@/components/BackButton";
-import SiblingAppsLinks from "@/components/SiblingAppsLinks";
 import StatusCircle from "@/components/StatusCircle";
 import {
   MAX_CONTENT_WIDTH,
@@ -269,11 +268,25 @@ export default function ConnectedScreen() {
               ]}
             >
               <Text style={[styles.openButtonText, { color: c.onAccent }]}>
-                Открыть приложение
+                Открыть профиль
               </Text>
             </Pressable>
 
-            <View style={{ height: 20 }} />
+            <View style={{ height: 14 }} />
+
+            <Pressable
+              onPress={confirmDisconnect}
+              style={({ pressed }) => [
+                styles.disconnectButton,
+                { borderColor: c.green, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Text style={[styles.disconnectText, { color: c.red }]}>
+                Отключить
+              </Text>
+            </Pressable>
+
+            <View style={{ height: 22 }} />
 
             {/* Legal links */}
             <View style={styles.legalLinks}>
@@ -305,20 +318,9 @@ export default function ConnectedScreen() {
               </Text>
             </View>
 
-            <View style={{ height: 20 }} />
-
-            <Pressable
-              onPress={confirmDisconnect}
-              style={styles.disconnectButton}
-            >
-              <Text style={[styles.disconnectText, { color: c.textSecondary }]}>
-                Отключить
-              </Text>
-            </Pressable>
           </View>
         </View>
 
-        <SiblingAppsLinks />
       </ScrollView>
     </View>
   );
@@ -474,12 +476,15 @@ const styles = StyleSheet.create({
     color: "#888",
   },
   disconnectButton: {
-    height: 44,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
   },
   disconnectText: {
     fontSize: 16,
+    fontWeight: "600",
   },
 });
