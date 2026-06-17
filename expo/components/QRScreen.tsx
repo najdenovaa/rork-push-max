@@ -2,11 +2,13 @@ import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type AppStateStatus,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -14,7 +16,7 @@ import BackButton from "@/components/BackButton";
 import { MAX_CONTENT_WIDTH, SERVER_URL, useTheme } from "@/constants/colors";
 import { useApp } from "@/providers/app";
 
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 1500;
 const QR_REFRESH_MS = 20000;
 
 export default function QRScreen() {
@@ -36,7 +38,7 @@ export default function QRScreen() {
 
   const qrUrl = `${SERVER_URL}/api/max-qr/${userId ?? ""}?v=${qrVersion}`;
 
-  // Poll status every 5 seconds.
+  // Poll status every 1.5 seconds.
   useEffect(() => {
     let active = true;
     const poll = async (): Promise<void> => {
@@ -49,6 +51,14 @@ export default function QRScreen() {
     return () => {
       active = false;
     };
+  }, [checkStatus]);
+
+  // Re-check immediately when app returns to foreground (e.g. after Safari pairing).
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
+      if (state === "active") void checkStatus();
+    });
+    return () => sub.remove();
   }, [checkStatus]);
 
   // Validate QR URL before showing — retry for up to 15 seconds.
