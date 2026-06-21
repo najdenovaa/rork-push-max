@@ -101,8 +101,11 @@ export default function QRScreen() {
           }
           if (res.status === 404) {
             const ok = await reconnect();
-            if (ok && !cancelled) {
+            if (cancelled) return;
+            if (ok) {
               setQrPhase("loading");
+            } else {
+              setQrPhase("error");
             }
             return;
           }

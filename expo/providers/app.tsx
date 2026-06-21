@@ -126,9 +126,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
   }, [connect]);
 
   /** Handle a session_expired response: reconnect and stay pending on success. */
-  const handleSessionExpired = useCallback(async (): Promise<void> => {
+  const handleSessionExpired = useCallback(async (): Promise<boolean> => {
     console.log("[app] session expired, auto-reconnecting...");
-    await reconnect();
+    return await reconnect();
   }, [reconnect]);
 
   /** Check pairing status from the server. 30 s timeout.
@@ -151,11 +151,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
               reconnect?: boolean;
             };
             if (body.error === "session_expired" && body.reconnect) {
-              void handleSessionExpired();
+              const ok = await handleSessionExpired();
+              return ok ? "pending" : "unknown";
             }
           } catch {
             // ignore parse error — treat as regular failure
           }
+          return "unknown";
         }
         return "pending";
       }
@@ -184,7 +186,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       console.log("[app] status check failed", err);
       return "pending";
     }
-  }, [userId, handleSessionExpired]);
+  }, [userId, handleSessionExpired, reconnect]);
 
   // When a stored userId is loaded, check its real status before showing a screen.
   useEffect(() => {
