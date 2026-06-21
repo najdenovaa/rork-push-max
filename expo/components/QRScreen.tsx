@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
@@ -22,7 +22,7 @@ const QR_REFRESH_MS = 20000;
 export default function QRScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { userId, pairing, pairingHint, checkStatus, submit2fa, disconnect } =
+  const { userId, pairing, pairingHint, checkStatus, submit2fa, disconnect, reconnect } =
     useApp();
 
   const [qrVersion, setQrVersion] = useState<number>(0);
@@ -30,6 +30,10 @@ export default function QRScreen() {
 
   // QR validation states: loading → fetch ok → ready; loading + 15s → error
   const [qrPhase, setQrPhase] = useState<"loading" | "ready" | "error">("loading");
+  const qrPhaseRef = useRef(qrPhase);
+  useEffect(() => {
+    qrPhaseRef.current = qrPhase;
+  }, [qrPhase]);
 
   // 2FA state
   const [password, setPassword] = useState<string>("");
@@ -61,24 +65,54 @@ export default function QRScreen() {
     return () => sub.remove();
   }, [checkStatus]);
 
-  // Validate QR URL before showing — retry for up to 15 seconds.
+  // Validate QR URL before showing — 8 s fetch timeout, retry up to 45 s.
+  // On 404 session_expired → reconnect. On 503 → retry (not immediate error).
+  // When qrVersion refreshes every 20 s, keep QR on screen (don't reset to loading).
   useEffect(() => {
     if (pairing === "needs_2fa") return;
 
-    setQrPhase("loading");
+    // Don't flicker back to loading when refreshing an already-shown QR
+    if (qrPhaseRef.current !== "ready") {
+      setQrPhase("loading");
+    }
     let cancelled = false;
+
+    const fetchWithAbort = async (
+      url: string,
+      timeoutMs: number
+    ): Promise<Response> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    };
 
     const validateQR = async (): Promise<void> => {
       const startTime = Date.now();
-      while (!cancelled && Date.now() - startTime < 15000) {
+      while (!cancelled && Date.now() - startTime < 45000) {
         try {
-          const res = await fetch(qrUrl);
+          const res = await fetchWithAbort(qrUrl, 8000);
           if (res.ok) {
             if (!cancelled) setQrPhase("ready");
             return;
           }
+          if (res.status === 404) {
+            const ok = await reconnect();
+            if (ok && !cancelled) {
+              setQrPhase("loading");
+            }
+            return;
+          }
+          if (res.status === 503) {
+            // QR not ready — keep retrying
+            await new Promise<void>((r) => setTimeout(r, 1000));
+            continue;
+          }
         } catch {
-          // will retry
+          // network error — retry
         }
         await new Promise<void>((r) => {
           setTimeout(r, 1000);
@@ -92,7 +126,7 @@ export default function QRScreen() {
     return () => {
       cancelled = true;
     };
-  }, [qrUrl, pairing]);
+  }, [qrUrl, pairing, reconnect]);
 
   // Refresh QR every 20 seconds — only when NOT in 2FA mode.
   useEffect(() => {

@@ -8,9 +8,9 @@ import { useApp } from "@/providers/app";
 
 export default function Index() {
   const c = useTheme();
-  const { userId, status, isLoaded } = useApp();
+  const { userId, status, isLoaded, isReconnecting } = useApp();
 
-  if (!isLoaded) {
+  if (!isLoaded || isReconnecting) {
     return (
       <View style={[styles.outermost, { backgroundColor: c.background }]}>
         <View style={styles.constrained}>

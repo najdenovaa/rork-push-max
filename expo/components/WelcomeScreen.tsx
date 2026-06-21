@@ -25,6 +25,7 @@ export default function WelcomeScreen() {
   /** Connect to the server with a placeholder push token.
    *  Notification permission is requested later on the ConnectedScreen. */
   const handleStart = async (): Promise<void> => {
+    if (phase === "loading") return;
     setPhase("loading");
 
     const result = await connect("pending-expo");
@@ -75,7 +76,7 @@ export default function WelcomeScreen() {
           {phase === "error" && (
             <>
               <Text style={[styles.errorText, { color: c.red }]}>
-                Сервер временно недоступен. Проверьте интернет и попробуйте снова.
+                Не удалось подключиться к серверу. Проверьте интернет и нажмите „Повторить".
               </Text>
               <View style={{ height: 20 }} />
               <Pressable
