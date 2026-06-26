@@ -3,7 +3,7 @@ import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -32,6 +32,10 @@ Notifications.setNotificationHandler({
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  // Debounce duplicate notification taps (getLastNotificationResponseAsync
+  // + addNotificationResponseReceivedListener both fire on cold start).
+  const lastTapRef = useRef<{ id: string; ts: number } | null>(null);
+
   useEffect(() => {
     void configureAndroidChannels();
 
@@ -60,6 +64,17 @@ export default function RootLayout() {
     const handleNotificationTap = (
       response: Notifications.NotificationResponse
     ): void => {
+      const identifier =
+        response.notification.request.identifier ??
+        response.actionIdentifier;
+      const now = Date.now();
+      const prev = lastTapRef.current;
+      // Skip duplicate firings within 4000ms for the same notification.
+      if (prev && prev.id === identifier && now - prev.ts < 4000) {
+        return;
+      }
+      lastTapRef.current = { id: identifier, ts: now };
+
       const data =
         response.notification.request.content.data as
           | Record<string, unknown>

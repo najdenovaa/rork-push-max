@@ -16,6 +16,7 @@ function isAllowedMaxUrl(url: string): boolean {
 
 /** Returns true if url is a VK push-tap URL that should open the native vk:// app. */
 function isVkOpenUrl(url: string): boolean {
+  if (url === "vk://" || url.startsWith("vk://")) return true;
   try {
     const parsed = new URL(url);
     const host = parsed.hostname;
@@ -118,6 +119,15 @@ export function resolvePushOpenUrl(data: Record<string, unknown> | undefined): s
   return LINKED_APP_URL;
 }
 
+/** Open vk:// native app, fire-and-forget. Never falls back to https —
+ *  iOS rejects the Linking promise when the foreground app switches, so
+ *  a catch-then-fallback would open Safari alongside VK. */
+function openVkNative(): void {
+  void Linking.openURL("vk://").catch((error) => {
+    console.log("[notifications] vk native open failed", error);
+  });
+}
+
 /** Convert an https://max.ru URL to the native max:// scheme. */
 function toNativeMaxUrl(httpsUrl: string): string {
   try {
@@ -139,17 +149,8 @@ export async function openLinkedApp(
   const url = httpsUrl ?? LINKED_APP_URL;
 
   if (isVkOpenUrl(url)) {
-    try {
-      await Linking.openURL("vk://");
-      return;
-    } catch {
-      try {
-        await Linking.openURL("https://vk.com/");
-        return;
-      } catch (error) {
-        console.log("[notifications] failed to open vk", error);
-      }
-    }
+    openVkNative();
+    return;
   }
 
   const resolvedUserId = userId ?? extractUserIdFromMkspushUrl(url);
@@ -189,18 +190,8 @@ export async function openAppFromPushNotification(
 ): Promise<void> {
   if (data?.url != null && typeof data.url === "string" && data.url.length > 0) {
     if (isVkOpenUrl(data.url)) {
-      try {
-        await Linking.openURL("vk://");
-        return;
-      } catch {
-        try {
-          await Linking.openURL("https://vk.com/");
-          return;
-        } catch (error) {
-          console.log("[notifications] failed to open vk", error);
-          return;
-        }
-      }
+      openVkNative();
+      return;
     }
   }
   const url = resolvePushOpenUrl(data);
