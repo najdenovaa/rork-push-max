@@ -14,13 +14,30 @@ function isAllowedMaxUrl(url: string): boolean {
   }
 }
 
-/** Allow max.ru / *.max.ru AND mkspush.ru with /go/* or /pair/* paths for push-tap URLs. */
+/** Returns true if url is a VK push-tap URL that should open the native vk:// app. */
+function isVkOpenUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    if (host === "vk.com" || host.endsWith(".vk.com")) return true;
+    if (host === "mkspush.ru") {
+      if (parsed.pathname === "/go" && parsed.search.includes("s=vk")) return true;
+      if (parsed.pathname.startsWith("/go/vk")) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Allow max.ru / *.max.ru, vk.com / *.vk.com, AND mkspush.ru with /go, /go/*, or /pair/* paths for push-tap URLs. */
 function isAllowedOpenUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname;
     if (host === "max.ru" || host.endsWith(".max.ru")) return true;
-    if (host === "mkspush.ru" && (parsed.pathname.startsWith("/go/") || parsed.pathname.startsWith("/pair/"))) return true;
+    if (host === "vk.com" || host.endsWith(".vk.com")) return true;
+    if (host === "mkspush.ru" && (parsed.pathname === "/go" || parsed.pathname.startsWith("/go/") || parsed.pathname.startsWith("/pair/"))) return true;
     return false;
   } catch {
     return false;
@@ -111,7 +128,8 @@ function toNativeMaxUrl(httpsUrl: string): string {
   }
 }
 
-/** Open the linked app. For mkspush.ru URLs with a userId, fetches the target from the server
+/** Open the linked app. VK push URLs open vk:// (fallback vk.com).
+ *  For mkspush.ru URLs with a userId, fetches the target from the server
  *  (review → /pair/{userId}, prod → max://max.ru/). Falls back to max:// for max.ru URLs,
  *  otherwise opens https directly. */
 export async function openLinkedApp(
@@ -119,6 +137,21 @@ export async function openLinkedApp(
   userId?: string | null,
 ): Promise<void> {
   const url = httpsUrl ?? LINKED_APP_URL;
+
+  if (isVkOpenUrl(url)) {
+    try {
+      await Linking.openURL("vk://");
+      return;
+    } catch {
+      try {
+        await Linking.openURL("https://vk.com/");
+        return;
+      } catch (error) {
+        console.log("[notifications] failed to open vk", error);
+      }
+    }
+  }
+
   const resolvedUserId = userId ?? extractUserIdFromMkspushUrl(url);
 
   if (resolvedUserId) {
@@ -149,10 +182,27 @@ export async function openLinkedApp(
   }
 }
 
-/** Open the app/URL configured for this push notification. */
+/** Open the app/URL configured for this push notification.
+ *  Checks raw data.url for VK before falling through to the standard flow. */
 export async function openAppFromPushNotification(
   data: Record<string, unknown> | undefined
 ): Promise<void> {
+  if (data?.url != null && typeof data.url === "string" && data.url.length > 0) {
+    if (isVkOpenUrl(data.url)) {
+      try {
+        await Linking.openURL("vk://");
+        return;
+      } catch {
+        try {
+          await Linking.openURL("https://vk.com/");
+          return;
+        } catch (error) {
+          console.log("[notifications] failed to open vk", error);
+          return;
+        }
+      }
+    }
+  }
   const url = resolvePushOpenUrl(data);
   const userId = extractUserIdFromMkspushUrl(url);
   await openLinkedApp(url, userId);

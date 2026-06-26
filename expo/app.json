@@ -24,7 +24,8 @@
       "bundleIdentifier": "ru.mskpush.app",
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
-          "max"
+          "max",
+          "vk"
         ]
       }
     },
